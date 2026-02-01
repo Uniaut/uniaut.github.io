@@ -18,7 +18,11 @@ permalink: /articles.html
                             {{ post.title }}
                         </h2>
                         <p class="text-gray-500 leading-relaxed max-w-2xl">
-                            {{ post.excerpt | strip_html | truncate: 200 }}
+                            {% if post.excerpt %}
+                                {{ post.excerpt | strip_html | truncate: 200 }}
+                            {% else %}
+                                {{ post.content | strip_html | truncate: 200 }}
+                            {% endif %}
                         </p>
                     </div>
                 </a>
