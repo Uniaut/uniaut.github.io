@@ -1,0 +1,47 @@
+title: geonuchoi
+author: 최건우
+email: kunwoo0927@gmail.com
+description: >-
+  개발과 디자인에 관심이 있는 개발자입니다.
+baseurl: ""
+url: "https://uniaut.github.io"
+
+# Social
+github_username: uniaut
+linkedin_username: 건우-최-7362ba2b2
+
+# Build settings
+markdown: kramdown
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Collections
+collections:
+  posts:
+    output: true
+    permalink: /articles/:title/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+
+# Exclude
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache
+  - .DS_Store

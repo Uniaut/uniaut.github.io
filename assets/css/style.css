@@ -1,0 +1,136 @@
+body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+    background-color: #ffffff;
+    color: #000000;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Smooth Transition */
+a, button {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Sidebar Sticky positioning */
+.sidebar {
+    position: sticky;
+    top: 6rem;
+    height: calc(100vh - 6rem);
+}
+
+/* Hide scrollbar for clean look */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+
+/* Markdown content styling */
+.markdown-content {
+    line-height: 1.8;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.markdown-content h1 {
+    font-size: 2rem;
+}
+
+.markdown-content h2 {
+    font-size: 1.5rem;
+}
+
+.markdown-content h3 {
+    font-size: 1.25rem;
+}
+
+.markdown-content p {
+    margin-bottom: 1.5rem;
+    color: #374151;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.markdown-content a {
+    color: #000;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.markdown-content a:hover {
+    color: #6b7280;
+}
+
+.markdown-content code {
+    background-color: #f3f4f6;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.markdown-content pre {
+    background-color: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.markdown-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-bottom: 1.5rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.markdown-content hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 2rem 0;
+}
+
+/* Syntax highlighting */
+.highlight {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}

@@ -1,0 +1,18 @@
+<aside class="w-full md:w-48 flex-shrink-0">
+    <nav class="sidebar">
+        <ul class="space-y-4">
+            <li>
+                <a href="{{ '/' | relative_url }}" class="text-sm font-medium {% if page.url == '/' %}text-black{% else %}text-gray-400{% endif %} hover:text-black flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 {% if page.url == '/' %}bg-black{% else %}bg-gray-300{% endif %} rounded-full"></span>
+                    about-me
+                </a>
+            </li>
+            <li>
+                <a href="{{ '/articles.html' | relative_url }}" class="text-sm font-medium {% if page.url == '/articles.html' or page.layout == 'post' %}text-black{% else %}text-gray-400{% endif %} hover:text-black flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 {% if page.url == '/articles.html' or page.layout == 'post' %}bg-black{% else %}bg-gray-300{% endif %} rounded-full"></span>
+                    articles
+                </a>
+            </li>
+        </ul>
+    </nav>
+</aside>
