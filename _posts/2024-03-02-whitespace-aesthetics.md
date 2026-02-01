@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "화이트 스페이스의 미학"
+title: "(예시 포스트) 화이트 스페이스의 미학"
 date: 2024-03-02
 categories: [design]
 ---

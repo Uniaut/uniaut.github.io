@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Pretendard: 웹 폰트의 새로운 표준"
+title: "(예시 포스트) Pretendard: 웹 폰트의 새로운 표준"
 date: 2024-04-15
 categories: [design, typography]
 ---

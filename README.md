@@ -1,4 +1,5 @@
-# uniaut.github.io
+# geonuchoi.com
+### (또는  uniaut.github.io)
 
 Jekyll 기반 개인 블로그
 
