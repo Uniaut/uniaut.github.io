@@ -2,13 +2,26 @@ title: geonuchoi
 author: 최건우
 email: kunwoo0927@gmail.com
 description: >-
-  개발과 디자인에 관심이 있는 개발자입니다.
+  개발자입니다.
 baseurl: ""
 url: "https://uniaut.github.io"
 
 # Social
 github_username: uniaut
 linkedin_username: 건우-최-7362ba2b2
+
+# Open Graph / SEO
+logo: /assets/images/logo.png
+image: /assets/images/og-default.png
+social:
+  name: 최건우
+  links:
+    - https://github.com/uniaut
+    - https://www.linkedin.com/in/건우-최-7362ba2b2
+
+# Twitter Card (카카오톡도 참고)
+twitter:
+  card: summary_large_image
 
 # Build settings
 markdown: kramdown

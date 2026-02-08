@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "mac mini openclaw 따위로 절대 만족하지 않을 것이다"
-date: 2026-02-09
+date: 2026-02-09 00:00:00 +0900
 categories: []
 ---
 
