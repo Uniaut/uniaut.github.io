@@ -32,5 +32,33 @@
     </div>
     
     {% include footer.html %}
+
+    {% if content contains "language-mermaid" %}
+    <!-- Mermaid.js rendering for diagrams -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        
+        // Find all markdown code blocks generated with language-mermaid
+        const codeBlocks = document.querySelectorAll('pre code.language-mermaid, pre.language-mermaid code, div.language-mermaid pre');
+        
+        codeBlocks.forEach((codeEl) => {
+            const rawCode = codeEl.textContent;
+            const preEl = codeEl.closest('pre') || codeEl;
+            
+            const mermaidDiv = document.createElement('div');
+            mermaidDiv.className = 'mermaid';
+            mermaidDiv.textContent = rawCode;
+            
+            preEl.parentNode.replaceChild(mermaidDiv, preEl);
+        });
+
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+    {% endif %}
 </body>
 </html>
+
