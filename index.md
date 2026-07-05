@@ -22,15 +22,6 @@ title: About Me
                 </p>
             </section>
 
-            <!-- Minimal Conway's Game of Life Simulation Section -->
-            <section class="pt-8 border-t border-gray-100">
-                <h2 class="text-2xl font-semibold mb-6">Conway's Game of Life: R-pentomino</h2>
-                
-                <div class="w-full bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm my-6">
-                    <canvas id="gameCanvas" class="block w-full cursor-crosshair bg-white"></canvas>
-                </div>
-            </section>
-
             <!-- Contact Section -->
             <section class="pt-8 border-t border-gray-100">
                 <h2 class="text-2xl font-semibold mb-4">연락처</h2>
@@ -51,6 +42,13 @@ title: About Me
                         </a>
                     </li>
                 </ul>
+            </section>
+
+            <!-- Minimal Conway's Game of Life Simulation Section (Below Contact, No Title) -->
+            <section class="pt-8 border-t border-gray-100">
+                <div class="w-full bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm my-6">
+                    <canvas id="gameCanvas" class="block w-full cursor-crosshair bg-white"></canvas>
+                </div>
             </section>
         </div>
     </div>
@@ -199,7 +197,7 @@ title: About Me
     canvas.addEventListener('mousemove', (e) => {
         if (isDrawing) handleCanvasInteraction(e);
     });
-    window.addEventListener('mouseup', () => {
+    canvas.addEventListener('mouseup', () => {
         isDrawing = false;
     });
 
