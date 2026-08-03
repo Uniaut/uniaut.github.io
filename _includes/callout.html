@@ -1,0 +1,8 @@
+{% assign type = include.type | default: "info" %}
+{% assign icon = include.icon | default: "💡" %}
+<div class="callout callout-{{ type }}">
+    <span class="callout-icon">{{ icon }}</span>
+    <div class="callout-content">
+        {{ include.content | markdownify }}
+    </div>
+</div>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Rotating Cube</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #ffffff;
+      overflow: hidden;
+    }
+
+    .container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 800px;
+    }
+
+    .cube-scene {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      transform-style: preserve-3d;
+    }
+
+    .cube {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    /* Highly transparent light gray glass faces */
+    .face {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border: 1px solid rgba(107, 114, 128, 0.25);
+      border-radius: 12px;
+      background-color: rgba(226, 232, 240, 0.2);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      box-shadow: 
+        inset 0 0 16px rgba(255, 255, 255, 0.8),
+        inset 0 0 4px rgba(71, 85, 105, 0.08),
+        0 8px 24px rgba(0, 0, 0, 0.03);
+      user-select: none;
+    }
+
+    .face-front  { transform: rotateY(  0deg) translateZ(70px); }
+    .face-back   { transform: rotateY(180deg) translateZ(70px); }
+    .face-right  { transform: rotateY( 90deg) translateZ(70px); }
+    .face-left   { transform: rotateY(-90deg) translateZ(70px); }
+    .face-top    { transform: rotateX( 90deg) translateZ(70px); }
+    .face-bottom { transform: rotateX(-90deg) translateZ(70px); }
+
+    .shadow {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+      transform: rotateX(90deg) translateZ(-110px);
+      filter: blur(12px);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="cube-scene">
+      <div class="cube" id="cube">
+        <div class="face face-front"></div>
+        <div class="face face-back"></div>
+        <div class="face face-right"></div>
+        <div class="face face-left"></div>
+        <div class="face face-top"></div>
+        <div class="face face-bottom"></div>
+      </div>
+      <div class="shadow"></div>
+    </div>
+  </div>
+
+  <script>
+    const cube = document.getElementById('cube');
+    // Initial orientation: (0deg, 0deg, 45deg)
+    let rotX = 0;
+    let rotY = 0;
+    let rotZ = 45;
+
+    let lastTime = null;
+
+    function animate(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Speeds: X: 30 deg/s, Y: 60 deg/s, Z: 0 deg/s
+      rotX += 30 * delta;
+      rotY += 60 * delta;
+      rotZ += 0 * delta;
+
+      cube.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) rotateZ(${rotZ}deg)`;
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

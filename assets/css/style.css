@@ -113,6 +113,72 @@ a, button {
     font-style: italic;
 }
 
+/* Notion-style Callout Box */
+.markdown-content .callout,
+.markdown-content blockquote.callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    color: #1e293b;
+    font-style: normal;
+}
+
+.markdown-content .callout p,
+.markdown-content blockquote.callout p {
+    margin-bottom: 0;
+    color: #1e293b;
+}
+
+.markdown-content .callout p:not(:last-child),
+.markdown-content blockquote.callout p:not(:last-child) {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-content .callout-icon {
+    font-size: 1.25rem;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+
+.markdown-content .callout-content {
+    flex: 1;
+}
+
+/* Callout Variants */
+.markdown-content .callout-info,
+.markdown-content blockquote.callout-info {
+    background-color: #eff6ff;
+    border-color: #dbeafe;
+    border-left-color: #3b82f6;
+}
+
+.markdown-content .callout-warning,
+.markdown-content blockquote.callout-warning {
+    background-color: #fffbeb;
+    border-color: #fef3c7;
+    border-left-color: #f59e0b;
+}
+
+.markdown-content .callout-danger,
+.markdown-content blockquote.callout-danger {
+    background-color: #fef2f2;
+    border-color: #fee2e2;
+    border-left-color: #ef4444;
+}
+
+.markdown-content .callout-success,
+.markdown-content blockquote.callout-success {
+    background-color: #f0fdf4;
+    border-color: #dcfce7;
+    border-left-color: #22c55e;
+}
+
 .markdown-content img {
     max-width: 100%;
     height: auto;
