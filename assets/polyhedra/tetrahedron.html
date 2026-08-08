@@ -33,30 +33,26 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
     dirLight1.position.set(5, 10, 7);
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xe2e8f0, 0.6);
+    const dirLight2 = new THREE.DirectionalLight(0xe2e8f0, 0.4);
     dirLight2.position.set(-5, -5, -5);
     scene.add(dirLight2);
 
     const geometry = new THREE.TetrahedronGeometry(1.2);
 
-    const material = new THREE.MeshPhysicalMaterial({
+    const material = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
-      metalness: 0.05,
-      roughness: 0.1,
-      transmission: 0.85,
-      thickness: 0.6,
+      roughness: 0.2,
+      metalness: 0.1,
       transparent: true,
-      opacity: 0.4,
-      reflectivity: 0.4,
-      clearcoat: 0.4,
-      clearcoatRoughness: 0.1,
+      opacity: 0.22,
+      flatShading: true,
       side: THREE.DoubleSide
     });
 
@@ -64,7 +60,7 @@
 
     const edges = new THREE.EdgesGeometry(geometry);
     const lineMaterial = new THREE.LineBasicMaterial({ 
-      color: 0x4b5563, 
+      color: 0x6b7280, 
       transparent: true, 
       opacity: 0.35, 
       linewidth: 1 
