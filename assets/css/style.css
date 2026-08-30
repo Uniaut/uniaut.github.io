@@ -114,8 +114,7 @@ a, button {
 }
 
 /* Notion-style Callout Box */
-.markdown-content .callout,
-.markdown-content blockquote.callout {
+.markdown-content .callout {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
@@ -129,15 +128,28 @@ a, button {
     font-style: normal;
 }
 
-.markdown-content .callout p,
-.markdown-content blockquote.callout p {
-    margin-bottom: 0;
+.markdown-content blockquote.callout {
+    display: block;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
     color: #1e293b;
+    font-style: normal;
 }
 
-.markdown-content .callout p:not(:last-child),
-.markdown-content blockquote.callout p:not(:last-child) {
-    margin-bottom: 0.5rem;
+.markdown-content .callout p,
+.markdown-content blockquote.callout p {
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+    line-height: 1.7;
+}
+
+.markdown-content .callout p:last-child,
+.markdown-content blockquote.callout p:last-child {
+    margin-bottom: 0;
 }
 
 .markdown-content .callout-icon {
