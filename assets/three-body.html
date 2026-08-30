@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D Three-Body Problem Simulator / 3차원 삼체 시뮬레이션</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    :root {
+      --bg-color: #0b0f19;
+      --panel-bg: rgba(15, 23, 42, 0.82);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --input-bg: rgba(255, 255, 255, 0.07);
+      --input-border: rgba(255, 255, 255, 0.15);
+      --card-bg: rgba(30, 41, 59, 0.55);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", Pretendard, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    body.light {
+      --bg-color: #f8fafc;
+      --panel-bg: rgba(255, 255, 255, 0.88);
+      --panel-border: rgba(0, 0, 0, 0.08);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --accent-glow: rgba(2, 132, 199, 0.25);
+      --input-bg: rgba(0, 0, 0, 0.04);
+      --input-border: rgba(0, 0, 0, 0.12);
+      --card-bg: rgba(241, 245, 249, 0.8);
+      --card-border: rgba(0, 0, 0, 0.06);
+    }
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Floating Glassmorphic Top Toolbar */
+    .toolbar {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 9999px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      z-index: 20;
+      transition: all 0.3s ease;
+      max-width: 95vw;
+      overflow-x: auto;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-main);
+      background: var(--input-bg);
+      border: 1px solid var(--panel-border);
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+    body.light .btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .btn-icon {
+      width: 32px;
+      padding: 0;
+    }
+    .preset-select {
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-main);
+      background: var(--input-bg);
+      border: 1px solid var(--panel-border);
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .preset-select option {
+      background: #0f172a;
+      color: #ffffff;
+    }
+    body.light .preset-select option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+
+    /* Collapsible Side Control Panel */
+    .sidebar {
+      position: absolute;
+      top: 64px;
+      right: 16px;
+      width: 350px;
+      max-height: calc(100vh - 80px);
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      z-index: 20;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    }
+    .sidebar.closed {
+      transform: translateX(380px);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 55px;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .form-row label {
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--input-border);
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .number-input {
+      width: 100%;
+      padding: 3px 6px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-align: right;
+      outline: none;
+    }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .btn-full {
+      width: 100%;
+      height: 32px;
+    }
+
+    /* Telemetry HUD at Bottom Left */
+    .telemetry-hud {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      z-index: 15;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+      min-width: 230px;
+      transition: all 0.3s ease;
+    }
+    .hud-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .hud-val {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+    .hud-good {
+      color: #10b981;
+    }
+    .hud-warn {
+      color: #f59e0b;
+    }
+
+    /* Interaction Hint */
+    .hint {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--panel-bg);
+      backdrop-filter: blur(8px);
+      padding: 6px 12px;
+      border-radius: 9999px;
+      border: 1px solid var(--panel-border);
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.5s ease;
+    }
+
+    /* Modal for JSON import/export */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 20px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-content textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-main);
+      resize: none;
+      outline: none;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: absolute;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: #0284c7;
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        width: calc(100vw - 32px);
+        right: 16px;
+        top: 64px;
+      }
+      .telemetry-hud {
+        display: none;
+      }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Top Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-icon" id="btn-play" title="Play / Pause">⏸</button>
+    <select class="preset-select" id="preset-select" title="Select Orbit Preset">
+      <option value="figure8">Figure-8 (Chenciner)</option>
+      <option value="trefoil">3D Trefoil Knot</option>
+      <option value="butterfly">3D Butterfly</option>
+      <option value="dragonfly">Dragonfly Choreography</option>
+      <option value="lagrange">Lagrange Equilateral</option>
+      <option value="pythagorean">Pythagorean (Burrau)</option>
+      <option value="hierarchical">Star-Planet-Moon</option>
+      <option value="chaotic">3D Chaotic Freefall</option>
+    </select>
+    <button class="btn" id="btn-reset" title="Reset Simulation">↺ Reset</button>
+    <button class="btn" id="btn-random" title="Randomize Parameters">🎲 Random</button>
+    <button class="btn btn-icon" id="btn-autorotate" title="Toggle Auto-Rotate">🔄</button>
+    <button class="btn btn-icon" id="btn-theme" title="Toggle Theme">🌓</button>
+    <button class="btn" id="btn-toggle-sidebar" title="Tune Parameters">⚙️ Settings</button>
+  </div>
+
+  <!-- Telemetry HUD -->
+  <div class="telemetry-hud" id="telemetry">
+    <div class="hud-title">
+      <span>3-BODY TELEMETRY</span>
+      <span class="hud-val" id="hud-fps">60 FPS</span>
+    </div>
+    <div>Time (t): <span class="hud-val" id="hud-time">0.00</span></div>
+    <div>Total Energy E: <span class="hud-val" id="hud-energy">-1.287</span></div>
+    <div>Energy Error ΔE: <span class="hud-good" id="hud-error">0.000%</span></div>
+    <div>Angular Mom |L|: <span class="hud-val" id="hud-momentum">0.000</span></div>
+    <div>Speed [v1, v2, v3]: <span class="hud-val" id="hud-speeds">0.6, 0.6, 1.2</span></div>
+  </div>
+
+  <div class="hint" id="hint">🖱️ Drag to rotate &bull; Right-click to pan &bull; Scroll to zoom</div>
+
+  <!-- Side Control Panel -->
+  <div class="sidebar" id="sidebar">
+    <div class="section-title">
+      <span>Physics Engine</span>
+      <span style="font-size:10px; font-weight:normal;">Fast RK4 (0 GC)</span>
+    </div>
+    <div class="card">
+      <div class="form-row">
+        <label>G (Gravity)</label>
+        <input type="range" id="param-g" min="0.1" max="5.0" step="0.1" value="1.0">
+        <input type="number" class="number-input" id="num-g" value="1.0" step="0.1">
+      </div>
+      <div class="form-row">
+        <label>Speed (dt)</label>
+        <input type="range" id="param-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+        <input type="number" class="number-input" id="num-speed" value="1.0" step="0.1">
+      </div>
+      <div class="form-row">
+        <label>Softening ε</label>
+        <input type="range" id="param-softening" min="0.001" max="0.2" step="0.005" value="0.02">
+        <input type="number" class="number-input" id="num-softening" value="0.02" step="0.005">
+      </div>
+      <div class="form-row">
+        <label>Trail Len</label>
+        <input type="range" id="param-trail" min="100" max="1500" step="100" value="800">
+        <input type="number" class="number-input" id="num-trail" value="800" step="100">
+      </div>
+      <div class="switch-row" id="toggle-center">
+        <span>Auto Center of Mass</span>
+        <input type="checkbox" id="chk-center" checked>
+      </div>
+      <div class="switch-row" id="toggle-grid">
+        <span>Show Skybox Grid (격자)</span>
+        <input type="checkbox" id="chk-grid" checked>
+      </div>
+      <div class="switch-row" id="toggle-gravity-lines">
+        <span>Show Gravity Lines</span>
+        <input type="checkbox" id="chk-gravity-lines" checked>
+      </div>
+    </div>
+
+    <!-- Body 1 Config -->
+    <div class="section-title">
+      <span>Body 1 (Cyan)</span>
+      <span class="color-dot" style="background:#06b6d4;"></span>
+    </div>
+    <div class="card" id="card-b1">
+      <div class="form-row">
+        <label>Mass</label>
+        <input type="range" id="b1-m" min="0.1" max="20" step="0.1" value="1.0">
+        <input type="number" class="number-input" id="num-b1-m" value="1.0" step="0.1">
+      </div>
+      <div class="form-row">
+        <label>Pos (X,Y,Z)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; grid-column:span 2;">
+          <input type="number" class="number-input" id="b1-px" value="-0.970" step="0.05">
+          <input type="number" class="number-input" id="b1-py" value="0.243" step="0.05">
+          <input type="number" class="number-input" id="b1-pz" value="0.000" step="0.05">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Vel (X,Y,Z)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; grid-column:span 2;">
+          <input type="number" class="number-input" id="b1-vx" value="0.466" step="0.05">
+          <input type="number" class="number-input" id="b1-vy" value="0.432" step="0.05">
+          <input type="number" class="number-input" id="b1-vz" value="0.000" step="0.05">
+        </div>
+      </div>
+    </div>
+
+    <!-- Body 2 Config -->
+    <div class="section-title">
+      <span>Body 2 (Rose)</span>
+      <span class="color-dot" style="background:#f43f5e;"></span>
+    </div>
+    <div class="card" id="card-b2">
+      <div class="form-row">
+        <label>Mass</label>
+        <input type="range" id="b2-m" min="0.1" max="20" step="0.1" value="1.0">
+        <input type="number" class="number-input" id="num-b2-m" value="1.0" step="0.1">
+      </div>
+      <div class="form-row">
+        <label>Pos (X,Y,Z)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; grid-column:span 2;">
+          <input type="number" class="number-input" id="b2-px" value="0.970" step="0.05">
+          <input type="number" class="number-input" id="b2-py" value="-0.243" step="0.05">
+          <input type="number" class="number-input" id="b2-pz" value="0.000" step="0.05">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Vel (X,Y,Z)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; grid-column:span 2;">
+          <input type="number" class="number-input" id="b2-vx" value="0.466" step="0.05">
+          <input type="number" class="number-input" id="b2-vy" value="0.432" step="0.05">
+          <input type="number" class="number-input" id="b2-vz" value="0.000" step="0.05">
+        </div>
+      </div>
+    </div>
+
+    <!-- Body 3 Config -->
+    <div class="section-title">
+      <span>Body 3 (Amber)</span>
+      <span class="color-dot" style="background:#f59e0b;"></span>
+    </div>
+    <div class="card" id="card-b3">
+      <div class="form-row">
+        <label>Mass</label>
+        <input type="range" id="b3-m" min="0.1" max="20" step="0.1" value="1.0">
+        <input type="number" class="number-input" id="num-b3-m" value="1.0" step="0.1">
+      </div>
+      <div class="form-row">
+        <label>Pos (X,Y,Z)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; grid-column:span 2;">
+          <input type="number" class="number-input" id="b3-px" value="0.000" step="0.05">
+          <input type="number" class="number-input" id="b3-py" value="0.000" step="0.05">
+          <input type="number" class="number-input" id="b3-pz" value="0.000" step="0.05">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Vel (X,Y,Z)</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; grid-column:span 2;">
+          <input type="number" class="number-input" id="b3-vx" value="-0.932" step="0.05">
+          <input type="number" class="number-input" id="b3-vy" value="-0.864" step="0.05">
+          <input type="number" class="number-input" id="b3-vz" value="0.000" step="0.05">
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-group">
+      <button class="btn btn-full" id="btn-apply">Apply Changes</button>
+      <button class="btn btn-full" id="btn-export">📋 Copy JSON</button>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-full" id="btn-import-open">📥 Import JSON</button>
+      <button class="btn btn-full" id="btn-share-url">🔗 Share URL</button>
+    </div>
+  </div>
+
+  <!-- JSON Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content">
+      <div style="font-weight:600; font-size:14px;" id="modal-title">Import / Export Configuration</div>
+      <textarea id="modal-textarea" placeholder="Paste your 3-Body configuration JSON here..."></textarea>
+      <div class="btn-group">
+        <button class="btn" id="modal-cancel">Cancel</button>
+        <button class="btn active" id="modal-action">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied to Clipboard!</div>
+
+  <script>
+    // --- PERFORMANCE & OPTIMIZATION CONFIG ---
+    const MAX_TRAIL_CAP = 1500;
+    const PHYSICS_SUBSTEPS = 10;
+
+    const PRESETS = {
+      figure8: {
+        name: "Figure-8 Orbit (Chenciner)",
+        G: 1.0,
+        softening: 0.01,
+        cameraDist: 3.6,
+        bodies: [
+          { m: 1.0, pos: [-0.97000436, 0.24308753, 0.0], vel: [0.46620531, 0.43236573, 0.0] },
+          { m: 1.0, pos: [0.97000436, -0.24308753, 0.0], vel: [0.46620531, 0.43236573, 0.0] },
+          { m: 1.0, pos: [0.0, 0.0, 0.0], vel: [-0.93241062, -0.86473146, 0.0] }
+        ]
+      },
+      trefoil: {
+        name: "3D Trefoil Knot",
+        G: 1.0,
+        softening: 0.01,
+        cameraDist: 4.2,
+        bodies: [
+          { m: 1.0, pos: [-1.0, 0.0, 0.2], vel: [0.35, 0.55, 0.3] },
+          { m: 1.0, pos: [1.0, 0.0, -0.2], vel: [0.35, 0.55, -0.3] },
+          { m: 1.0, pos: [0.0, 0.0, 0.0], vel: [-0.7, -1.1, 0.0] }
+        ]
+      },
+      butterfly: {
+        name: "3D Butterfly Orbit",
+        G: 1.0,
+        softening: 0.01,
+        cameraDist: 4.0,
+        bodies: [
+          { m: 1.0, pos: [-1.0, 0.0, 0.15], vel: [0.30689, 0.12550, 0.28] },
+          { m: 1.0, pos: [1.0, 0.0, -0.15], vel: [0.30689, 0.12550, -0.28] },
+          { m: 1.0, pos: [0.0, 0.0, 0.0], vel: [-0.61378, -0.25100, 0.0] }
+        ]
+      },
+      dragonfly: {
+        name: "Dragonfly Choreography",
+        G: 1.0,
+        softening: 0.01,
+        cameraDist: 4.2,
+        bodies: [
+          { m: 1.0, pos: [-1.0, 0.0, 0.0], vel: [0.28270, 0.32721, 0.25] },
+          { m: 1.0, pos: [1.0, 0.0, -0.25], vel: [0.28270, 0.32721, -0.25] },
+          { m: 1.0, pos: [0.0, 0.0, 0.0], vel: [-0.56540, -0.65442, 0.0] }
+        ]
+      },
+      lagrange: {
+        name: "Lagrange Equilateral Orbit",
+        G: 1.0,
+        softening: 0.02,
+        cameraDist: 4.5,
+        bodies: [
+          { m: 1.0, pos: [1.2, 0.0, 0.0], vel: [0.0, 0.6928, 0.2] },
+          { m: 1.0, pos: [-0.6, 1.0392, 0.0], vel: [-0.6, -0.3464, -0.1] },
+          { m: 1.0, pos: [-0.6, -1.0392, 0.0], vel: [0.6, -0.3464, -0.1] }
+        ]
+      },
+      pythagorean: {
+        name: "Pythagorean Problem (Burrau)",
+        G: 1.0,
+        softening: 0.05,
+        cameraDist: 8.5,
+        bodies: [
+          { m: 3.0, pos: [1.0, 3.0, 0.0], vel: [0.0, 0.0, 0.0] },
+          { m: 4.0, pos: [-2.0, -1.0, 0.0], vel: [0.0, 0.0, 0.0] },
+          { m: 5.0, pos: [1.0, -1.0, 0.0], vel: [0.0, 0.0, 0.0] }
+        ]
+      },
+      hierarchical: {
+        name: "Star-Planet-Moon",
+        G: 1.0,
+        softening: 0.02,
+        cameraDist: 6.0,
+        bodies: [
+          { m: 15.0, pos: [0.0, 0.0, 0.0], vel: [0.0, -0.05, 0.0] },
+          { m: 0.8, pos: [2.5, 0.0, 0.0], vel: [0.0, 2.45, 0.3] },
+          { m: 0.05, pos: [2.85, 0.0, 0.0], vel: [0.0, 3.75, -0.2] }
+        ]
+      },
+      chaotic: {
+        name: "3D Chaotic Freefall",
+        G: 1.0,
+        softening: 0.03,
+        cameraDist: 5.0,
+        bodies: [
+          { m: 1.2, pos: [-1.2, 0.8, 0.5], vel: [0.2, -0.3, 0.4] },
+          { m: 1.0, pos: [1.1, -0.6, -0.4], vel: [-0.4, 0.2, -0.2] },
+          { m: 0.9, pos: [0.2, 1.2, -0.7], vel: [0.2, 0.1, -0.2] }
+        ]
+      }
+    };
+
+    const BODY_COLORS = [
+      { main: 0x06b6d4, hex: '#06b6d4', trailR: 0.13, trailG: 0.83, trailB: 0.93 }, // Cyan
+      { main: 0xf43f5e, hex: '#f43f5e', trailR: 0.98, trailG: 0.44, trailB: 0.52 }, // Rose
+      { main: 0xf59e0b, hex: '#f59e0b', trailR: 0.98, trailG: 0.75, trailB: 0.14 }  // Amber
+    ];
+
+    // State Variables
+    let isPaused = false;
+    let isVisible = true; // Offscreen rendering optimizer
+    let isLight = false;
+    let autoRotate = true;
+    let G = 1.0;
+    let simSpeed = 1.0;
+    let softening = 0.01;
+    let maxTrailLength = 800;
+    let autoCenter = true;
+    let simTime = 0;
+    let initialEnergy = 0;
+
+    // --- ZERO-ALLOCATION FLAT PHYSICS BUFFERS ---
+    const pos = new Float64Array(9);
+    const vel = new Float64Array(9);
+    const mass = new Float64Array(3);
+
+    const k1_v = new Float64Array(9), k1_a = new Float64Array(9);
+    const k2_v = new Float64Array(9), k2_a = new Float64Array(9);
+    const k3_v = new Float64Array(9), k3_a = new Float64Array(9);
+    const k4_v = new Float64Array(9), k4_a = new Float64Array(9);
+    const tmp_p = new Float64Array(9), tmp_v = new Float64Array(9);
+
+    let initialConfig = null;
+
+    // Three.js Scene Setup
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, -3.2, 3.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.autoRotate = autoRotate;
+    controls.autoRotateSpeed = 0.8;
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(10, 15, 10);
+    scene.add(dirLight);
+
+    // --- 3D SKYBOX GRID (Subtle Grid Cage) ---
+    function createSkyboxGrid(size = 8, divisions = 6) {
+      const group = new THREE.Group();
+      const half = size / 2;
+      const step = size / divisions;
+
+      const points = [];
+      for (let i = -half; i <= half; i += step) {
+        // Floor (Z = -half)
+        points.push(new THREE.Vector3(-half, i, -half), new THREE.Vector3(half, i, -half));
+        points.push(new THREE.Vector3(i, -half, -half), new THREE.Vector3(i, half, -half));
+
+        // Back Wall (Y = half)
+        points.push(new THREE.Vector3(-half, half, i), new THREE.Vector3(half, half, i));
+        points.push(new THREE.Vector3(i, half, -half), new THREE.Vector3(i, half, half));
+
+        // Left Wall (X = -half)
+        points.push(new THREE.Vector3(-half, -half, i), new THREE.Vector3(-half, half, i));
+        points.push(new THREE.Vector3(-half, i, -half), new THREE.Vector3(-half, i, half));
+      }
+
+      const gridGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const gridMat = new THREE.LineBasicMaterial({
+        color: 0x334155,
+        transparent: true,
+        opacity: 0.16,
+        linewidth: 1
+      });
+      const gridLines = new THREE.LineSegments(gridGeo, gridMat);
+      group.add(gridLines);
+
+      // Bounding Box Frame
+      const boxGeo = new THREE.BoxGeometry(size, size, size);
+      const boxEdges = new THREE.EdgesGeometry(boxGeo);
+      const boxEdgeMat = new THREE.LineBasicMaterial({
+        color: 0x475569,
+        transparent: true,
+        opacity: 0.28,
+        linewidth: 1.5
+      });
+      const boxFrame = new THREE.LineSegments(boxEdges, boxEdgeMat);
+      group.add(boxFrame);
+
+      // Central Axis Lines
+      const axisPoints = [
+        new THREE.Vector3(-half, 0, 0), new THREE.Vector3(half, 0, 0),
+        new THREE.Vector3(0, -half, 0), new THREE.Vector3(0, half, 0),
+        new THREE.Vector3(0, 0, -half), new THREE.Vector3(0, 0, half)
+      ];
+      const axisGeo = new THREE.BufferGeometry().setFromPoints(axisPoints);
+      const axisMat = new THREE.LineBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.14
+      });
+      const axisLines = new THREE.LineSegments(axisGeo, axisMat);
+      group.add(axisLines);
+
+      group.updateTheme = function(light) {
+        gridMat.color.setHex(light ? 0x94a3b8 : 0x334155);
+        gridMat.opacity = light ? 0.22 : 0.16;
+        boxEdgeMat.color.setHex(light ? 0x64748b : 0x475569);
+        boxEdgeMat.opacity = light ? 0.35 : 0.28;
+        axisMat.color.setHex(light ? 0x0284c7 : 0x38bdf8);
+        axisMat.opacity = light ? 0.18 : 0.14;
+      };
+
+      return group;
+    }
+
+    const skyboxGrid = createSkyboxGrid(8.0, 6);
+    scene.add(skyboxGrid);
+
+    // Gravity Interaction Lines
+    const gravityLinesGroup = new THREE.Group();
+    const gravityMaterials = [
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.25 }),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.25 }),
+      new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.25 })
+    ];
+    const gravityGeometries = [
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
+    ];
+    const gravityLines = gravityGeometries.map((geo, idx) => new THREE.Line(geo, gravityMaterials[idx]));
+    gravityLines.forEach(line => gravityLinesGroup.add(line));
+    scene.add(gravityLinesGroup);
+
+    // Center of Mass Marker
+    const comGeometry = new THREE.SphereGeometry(0.04, 12, 12);
+    const comMaterial = new THREE.MeshBasicMaterial({ color: 0x94a3b8, wireframe: true });
+    const comMesh = new THREE.Mesh(comGeometry, comMaterial);
+    scene.add(comMesh);
+
+    // Celestial Bodies & Fast Trails
+    const bodyMeshes = [];
+    const trailGeos = [];
+    const trailPosArrays = [];
+    const trailColArrays = [];
+    const trailCounts = [0, 0, 0];
+
+    const sphereSharedGeo = new THREE.SphereGeometry(0.12, 24, 24);
+
+    for (let i = 0; i < 3; i++) {
+      const material = new THREE.MeshStandardMaterial({
+        color: BODY_COLORS[i].main,
+        roughness: 0.2,
+        metalness: 0.3,
+        emissive: BODY_COLORS[i].main,
+        emissiveIntensity: 0.35
+      });
+      const mesh = new THREE.Mesh(sphereSharedGeo, material);
+      scene.add(mesh);
+      bodyMeshes.push(mesh);
+
+      const posArray = new Float32Array(MAX_TRAIL_CAP * 3);
+      const colArray = new Float32Array(MAX_TRAIL_CAP * 3);
+      const trailGeo = new THREE.BufferGeometry();
+      trailGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+      trailGeo.setAttribute('color', new THREE.BufferAttribute(colArray, 3));
+      trailGeo.setDrawRange(0, 0);
+
+      const trailMat = new THREE.LineBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85,
+        linewidth: 1.5
+      });
+      const trailLine = new THREE.Line(trailGeo, trailMat);
+      scene.add(trailLine);
+
+      trailGeos.push(trailGeo);
+      trailPosArrays.push(posArray);
+      trailColArrays.push(colArray);
+    }
+
+    // --- ZERO-ALLOCATION FAST RK4 PHYSICS ---
+
+    function computeAcc(p, m, G_const, eps2, out_a) {
+      out_a[0] = 0; out_a[1] = 0; out_a[2] = 0;
+      out_a[3] = 0; out_a[4] = 0; out_a[5] = 0;
+      out_a[6] = 0; out_a[7] = 0; out_a[8] = 0;
+
+      const pairs = [0, 3,  0, 6,  3, 6];
+      const mPairs = [0, 1,  0, 2,  1, 2];
+
+      for (let k = 0; k < 6; k += 2) {
+        const i3 = pairs[k];
+        const j3 = pairs[k + 1];
+        const mi = mPairs[k];
+        const mj = mPairs[k + 1];
+
+        const dx = p[j3] - p[i3];
+        const dy = p[j3 + 1] - p[i3 + 1];
+        const dz = p[j3 + 2] - p[i3 + 2];
+
+        const distSq = dx * dx + dy * dy + dz * dz + eps2;
+        const invDist3 = G_const / (distSq * Math.sqrt(distSq));
+
+        const fx = dx * invDist3;
+        const fy = dy * invDist3;
+        const fz = dz * invDist3;
+
+        out_a[i3]     += m[mj] * fx;
+        out_a[i3 + 1] += m[mj] * fy;
+        out_a[i3 + 2] += m[mj] * fz;
+
+        out_a[j3]     -= m[mi] * fx;
+        out_a[j3 + 1] -= m[mi] * fy;
+        out_a[j3 + 2] -= m[mi] * fz;
+      }
+    }
+
+    function fastRK4Step(dt, G_const, eps) {
+      const eps2 = eps * eps;
+
+      // Step 1
+      for (let i = 0; i < 9; i++) k1_v[i] = vel[i];
+      computeAcc(pos, mass, G_const, eps2, k1_a);
+
+      // Step 2
+      for (let i = 0; i < 9; i++) {
+        tmp_p[i] = pos[i] + 0.5 * dt * k1_v[i];
+        tmp_v[i] = vel[i] + 0.5 * dt * k1_a[i];
+      }
+      for (let i = 0; i < 9; i++) k2_v[i] = tmp_v[i];
+      computeAcc(tmp_p, mass, G_const, eps2, k2_a);
+
+      // Step 3
+      for (let i = 0; i < 9; i++) {
+        tmp_p[i] = pos[i] + 0.5 * dt * k2_v[i];
+        tmp_v[i] = vel[i] + 0.5 * dt * k2_a[i];
+      }
+      for (let i = 0; i < 9; i++) k3_v[i] = tmp_v[i];
+      computeAcc(tmp_p, mass, G_const, eps2, k3_a);
+
+      // Step 4
+      for (let i = 0; i < 9; i++) {
+        tmp_p[i] = pos[i] + dt * k3_v[i];
+        tmp_v[i] = vel[i] + dt * k3_a[i];
+      }
+      for (let i = 0; i < 9; i++) k4_v[i] = tmp_v[i];
+      computeAcc(tmp_p, mass, G_const, eps2, k4_a);
+
+      // Update
+      const dt6 = dt / 6.0;
+      for (let i = 0; i < 9; i++) {
+        pos[i] += dt6 * (k1_v[i] + 2.0 * (k2_v[i] + k3_v[i]) + k4_v[i]);
+        vel[i] += dt6 * (k1_a[i] + 2.0 * (k2_a[i] + k3_a[i]) + k4_a[i]);
+      }
+    }
+
+    function calculateTotalEnergy(G_const) {
+      let kinetic = 0;
+      let potential = 0;
+
+      for (let i = 0; i < 3; i++) {
+        const i3 = i * 3;
+        kinetic += 0.5 * mass[i] * (vel[i3] * vel[i3] + vel[i3 + 1] * vel[i3 + 1] + vel[i3 + 2] * vel[i3 + 2]);
+        for (let j = i + 1; j < 3; j++) {
+          const j3 = j * 3;
+          const dist = Math.hypot(pos[i3] - pos[j3], pos[i3 + 1] - pos[j3 + 1], pos[i3 + 2] - pos[j3 + 2]);
+          potential -= (G_const * mass[i] * mass[j]) / Math.max(0.001, dist);
+        }
+      }
+      return kinetic + potential;
+    }
+
+    function calculateAngularMomentum() {
+      let lx = 0, ly = 0, lz = 0;
+      for (let i = 0; i < 3; i++) {
+        const i3 = i * 3;
+        const m = mass[i];
+        const x = pos[i3], y = pos[i3 + 1], z = pos[i3 + 2];
+        const vx = vel[i3], vy = vel[i3 + 1], vz = vel[i3 + 2];
+        lx += m * (y * vz - z * vy);
+        ly += m * (z * vx - x * vz);
+        lz += m * (x * vy - y * vx);
+      }
+      return Math.hypot(lx, ly, lz);
+    }
+
+    function calculateCenterOfMass() {
+      let totalM = mass[0] + mass[1] + mass[2];
+      let cx = mass[0] * pos[0] + mass[1] * pos[3] + mass[2] * pos[6];
+      let cy = mass[0] * pos[1] + mass[1] * pos[4] + mass[2] * pos[7];
+      let cz = mass[0] * pos[2] + mass[1] * pos[5] + mass[2] * pos[8];
+      return { x: cx / totalM, y: cy / totalM, z: cz / totalM };
+    }
+
+    // --- INITIALIZATION & PRESETS ---
+
+    function loadPreset(key) {
+      const preset = PRESETS[key] || PRESETS.figure8;
+      G = preset.G || 1.0;
+      softening = preset.softening || 0.01;
+
+      for (let i = 0; i < 3; i++) {
+        const b = preset.bodies[i];
+        mass[i] = b.m;
+        pos[i * 3]     = b.pos[0];
+        pos[i * 3 + 1] = b.pos[1];
+        pos[i * 3 + 2] = b.pos[2];
+
+        vel[i * 3]     = b.vel[0];
+        vel[i * 3 + 1] = b.vel[1];
+        vel[i * 3 + 2] = b.vel[2];
+
+        const radius = Math.max(0.08, Math.min(0.35, 0.12 * Math.cbrt(b.m)));
+        bodyMeshes[i].scale.setScalar(radius / 0.12);
+      }
+
+      initialConfig = JSON.parse(JSON.stringify(preset));
+      simTime = 0;
+      initialEnergy = calculateTotalEnergy(G);
+
+      if (preset.cameraDist) {
+        camera.position.setLength(preset.cameraDist);
+      }
+
+      clearTrails();
+      syncUIWithState();
+      updateTelemetryHUD();
+    }
+
+    function clearTrails() {
+      for (let i = 0; i < 3; i++) {
+        trailCounts[i] = 0;
+        trailGeos[i].setDrawRange(0, 0);
+      }
+    }
+
+    function syncUIWithState() {
+      document.getElementById('param-g').value = G;
+      document.getElementById('num-g').value = G.toFixed(1);
+      document.getElementById('param-speed').value = simSpeed;
+      document.getElementById('num-speed').value = simSpeed.toFixed(1);
+      document.getElementById('param-softening').value = softening;
+      document.getElementById('num-softening').value = softening.toFixed(3);
+      document.getElementById('param-trail').value = maxTrailLength;
+      document.getElementById('num-trail').value = maxTrailLength;
+
+      const ids = ['b1', 'b2', 'b3'];
+      for (let i = 0; i < 3; i++) {
+        const prefix = ids[i];
+        const i3 = i * 3;
+        document.getElementById(`${prefix}-m`).value = mass[i];
+        document.getElementById(`num-${prefix}-m`).value = mass[i].toFixed(2);
+        document.getElementById(`${prefix}-px`).value = pos[i3].toFixed(3);
+        document.getElementById(`${prefix}-py`).value = pos[i3 + 1].toFixed(3);
+        document.getElementById(`${prefix}-pz`).value = pos[i3 + 2].toFixed(3);
+        document.getElementById(`${prefix}-vx`).value = vel[i3].toFixed(3);
+        document.getElementById(`${prefix}-vy`).value = vel[i3 + 1].toFixed(3);
+        document.getElementById(`${prefix}-vz`).value = vel[i3 + 2].toFixed(3);
+      }
+    }
+
+    function applyUIChanges() {
+      G = parseFloat(document.getElementById('param-g').value);
+      simSpeed = parseFloat(document.getElementById('param-speed').value);
+      softening = parseFloat(document.getElementById('param-softening').value);
+      maxTrailLength = Math.min(MAX_TRAIL_CAP, parseInt(document.getElementById('param-trail').value));
+
+      const ids = ['b1', 'b2', 'b3'];
+      for (let i = 0; i < 3; i++) {
+        const prefix = ids[i];
+        const i3 = i * 3;
+        mass[i] = parseFloat(document.getElementById(`${prefix}-m`).value);
+        pos[i3]     = parseFloat(document.getElementById(`${prefix}-px`).value);
+        pos[i3 + 1] = parseFloat(document.getElementById(`${prefix}-py`).value);
+        pos[i3 + 2] = parseFloat(document.getElementById(`${prefix}-pz`).value);
+        vel[i3]     = parseFloat(document.getElementById(`${prefix}-vx`).value);
+        vel[i3 + 1] = parseFloat(document.getElementById(`${prefix}-vy`).value);
+        vel[i3 + 2] = parseFloat(document.getElementById(`${prefix}-vz`).value);
+
+        const radius = Math.max(0.08, Math.min(0.35, 0.12 * Math.cbrt(mass[i])));
+        bodyMeshes[i].scale.setScalar(radius / 0.12);
+      }
+
+      simTime = 0;
+      initialEnergy = calculateTotalEnergy(G);
+      clearTrails();
+      showToast("Simulation Parameters Applied!");
+    }
+
+    // --- FAST DIRECT TRAIL RECORDING ---
+    function recordTrailPoint(bodyIdx, x, y, z) {
+      const pArr = trailPosArrays[bodyIdx];
+      const cArr = trailColArrays[bodyIdx];
+      let count = trailCounts[bodyIdx];
+
+      if (count < maxTrailLength) {
+        pArr[count * 3]     = x;
+        pArr[count * 3 + 1] = y;
+        pArr[count * 3 + 2] = z;
+        count++;
+        trailCounts[bodyIdx] = count;
+      } else {
+        pArr.copyWithin(0, 3, maxTrailLength * 3);
+        const last = (maxTrailLength - 1) * 3;
+        pArr[last]     = x;
+        pArr[last + 1] = y;
+        pArr[last + 2] = z;
+      }
+
+      const r = BODY_COLORS[bodyIdx].trailR;
+      const g = BODY_COLORS[bodyIdx].trailG;
+      const b = BODY_COLORS[bodyIdx].trailB;
+      const invCount = 1.0 / count;
+
+      for (let k = 0; k < count; k++) {
+        const alpha = k * invCount;
+        const k3 = k * 3;
+        cArr[k3]     = r * alpha;
+        cArr[k3 + 1] = g * alpha;
+        cArr[k3 + 2] = b * alpha;
+      }
+
+      const geo = trailGeos[bodyIdx];
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.color.needsUpdate = true;
+      geo.setDrawRange(0, count);
+    }
+
+    // --- UI EVENT LISTENERS ---
+    const btnPlay = document.getElementById('btn-play');
+    const presetSelect = document.getElementById('preset-select');
+    const btnReset = document.getElementById('btn-reset');
+    const btnRandom = document.getElementById('btn-random');
+    const btnAutorotate = document.getElementById('btn-autorotate');
+    const btnTheme = document.getElementById('btn-theme');
+    const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    const toast = document.getElementById('toast');
+
+    btnPlay.addEventListener('click', () => {
+      isPaused = !isPaused;
+      btnPlay.textContent = isPaused ? '▶' : '⏸';
+    });
+
+    presetSelect.addEventListener('change', (e) => loadPreset(e.target.value));
+
+    btnReset.addEventListener('click', () => {
+      if (initialConfig) {
+        for (let i = 0; i < 3; i++) {
+          const b = initialConfig.bodies[i];
+          mass[i] = b.m;
+          pos[i * 3]     = b.pos[0];
+          pos[i * 3 + 1] = b.pos[1];
+          pos[i * 3 + 2] = b.pos[2];
+          vel[i * 3]     = b.vel[0];
+          vel[i * 3 + 1] = b.vel[1];
+          vel[i * 3 + 2] = b.vel[2];
+        }
+      }
+      simTime = 0;
+      initialEnergy = calculateTotalEnergy(G);
+      clearTrails();
+      syncUIWithState();
+      showToast("Reset to Initial State");
+    });
+
+    btnRandom.addEventListener('click', () => {
+      for (let i = 0; i < 3; i++) {
+        mass[i] = 0.5 + Math.random() * 2.0;
+        pos[i * 3]     = (Math.random() - 0.5) * 3.0;
+        pos[i * 3 + 1] = (Math.random() - 0.5) * 3.0;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * 2.0;
+        vel[i * 3]     = (Math.random() - 0.5) * 1.5;
+        vel[i * 3 + 1] = (Math.random() - 0.5) * 1.5;
+        vel[i * 3 + 2] = (Math.random() - 0.5) * 1.5;
+      }
+      let px = 0, py = 0, pz = 0, totalM = 0;
+      for (let i = 0; i < 3; i++) {
+        px += mass[i] * vel[i * 3];
+        py += mass[i] * vel[i * 3 + 1];
+        pz += mass[i] * vel[i * 3 + 2];
+        totalM += mass[i];
+      }
+      for (let i = 0; i < 3; i++) {
+        vel[i * 3]     -= px / totalM;
+        vel[i * 3 + 1] -= py / totalM;
+        vel[i * 3 + 2] -= pz / totalM;
+      }
+
+      simTime = 0;
+      initialEnergy = calculateTotalEnergy(G);
+      clearTrails();
+      syncUIWithState();
+      showToast("Randomized 3D Configuration");
+    });
+
+    btnAutorotate.addEventListener('click', () => {
+      autoRotate = !autoRotate;
+      controls.autoRotate = autoRotate;
+      btnAutorotate.classList.toggle('active', autoRotate);
+    });
+    btnAutorotate.classList.toggle('active', autoRotate);
+
+    btnTheme.addEventListener('click', () => {
+      isLight = !isLight;
+      document.body.classList.toggle('light', isLight);
+      skyboxGrid.updateTheme(isLight);
+    });
+
+    btnToggleSidebar.addEventListener('click', () => {
+      sidebar.classList.toggle('closed');
+      btnToggleSidebar.classList.toggle('active', !sidebar.classList.contains('closed'));
+    });
+
+    document.getElementById('btn-apply').addEventListener('click', applyUIChanges);
+
+    function bindSliderAndNumber(sliderId, numberId) {
+      const slider = document.getElementById(sliderId);
+      const number = document.getElementById(numberId);
+      slider.addEventListener('input', () => number.value = slider.value);
+      number.addEventListener('input', () => slider.value = number.value);
+    }
+    bindSliderAndNumber('param-g', 'num-g');
+    bindSliderAndNumber('param-speed', 'num-speed');
+    bindSliderAndNumber('param-softening', 'num-softening');
+    bindSliderAndNumber('param-trail', 'num-trail');
+    bindSliderAndNumber('b1-m', 'num-b1-m');
+    bindSliderAndNumber('b2-m', 'num-b2-m');
+    bindSliderAndNumber('b3-m', 'num-b3-m');
+
+    document.getElementById('chk-center').addEventListener('change', (e) => autoCenter = e.target.checked);
+    document.getElementById('chk-grid').addEventListener('change', (e) => skyboxGrid.visible = e.target.checked);
+    document.getElementById('chk-gravity-lines').addEventListener('change', (e) => gravityLinesGroup.visible = e.target.checked);
+
+    // --- JSON IMPORT / EXPORT MODAL ---
+    const modal = document.getElementById('modal-overlay');
+    const modalTextarea = document.getElementById('modal-textarea');
+    const modalTitle = document.getElementById('modal-title');
+    const modalAction = document.getElementById('modal-action');
+    const modalCancel = document.getElementById('modal-cancel');
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function getCurrentConfigJSON() {
+      const config = {
+        name: "Custom 3D Three-Body Configuration",
+        G: G,
+        softening: softening,
+        speed: simSpeed,
+        bodies: [
+          { m: parseFloat(mass[0].toFixed(4)), pos: [parseFloat(pos[0].toFixed(4)), parseFloat(pos[1].toFixed(4)), parseFloat(pos[2].toFixed(4))], vel: [parseFloat(vel[0].toFixed(4)), parseFloat(vel[1].toFixed(4)), parseFloat(vel[2].toFixed(4))] },
+          { m: parseFloat(mass[1].toFixed(4)), pos: [parseFloat(pos[3].toFixed(4)), parseFloat(pos[4].toFixed(4)), parseFloat(pos[5].toFixed(4))], vel: [parseFloat(vel[3].toFixed(4)), parseFloat(vel[4].toFixed(4)), parseFloat(vel[5].toFixed(4))] },
+          { m: parseFloat(mass[2].toFixed(4)), pos: [parseFloat(pos[6].toFixed(4)), parseFloat(pos[7].toFixed(4)), parseFloat(pos[8].toFixed(4))], vel: [parseFloat(vel[6].toFixed(4)), parseFloat(vel[7].toFixed(4)), parseFloat(vel[8].toFixed(4))] }
+        ]
+      };
+      return JSON.stringify(config, null, 2);
+    }
+
+    document.getElementById('btn-export').addEventListener('click', () => {
+      const jsonStr = getCurrentConfigJSON();
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        showToast("Config JSON Copied to Clipboard! 📋");
+      }).catch(() => {
+        modalTitle.textContent = "Copy Configuration JSON";
+        modalTextarea.value = jsonStr;
+        modalAction.style.display = 'none';
+        modal.classList.add('open');
+      });
+    });
+
+    document.getElementById('btn-import-open').addEventListener('click', () => {
+      modalTitle.textContent = "Paste Configuration JSON";
+      modalTextarea.value = "";
+      modalAction.style.display = 'inline-flex';
+      modalAction.textContent = "Import";
+      modal.classList.add('open');
+    });
+
+    modalCancel.addEventListener('click', () => modal.classList.remove('open'));
+
+    modalAction.addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(modalTextarea.value);
+        if (parsed.bodies && parsed.bodies.length === 3) {
+          G = parsed.G || 1.0;
+          softening = parsed.softening || 0.01;
+          for (let i = 0; i < 3; i++) {
+            const b = parsed.bodies[i];
+            mass[i] = b.m || 1.0;
+            pos[i * 3]     = b.pos[0] || 0;
+            pos[i * 3 + 1] = b.pos[1] || 0;
+            pos[i * 3 + 2] = b.pos[2] || 0;
+            vel[i * 3]     = b.vel[0] || 0;
+            vel[i * 3 + 1] = b.vel[1] || 0;
+            vel[i * 3 + 2] = b.vel[2] || 0;
+          }
+          simTime = 0;
+          initialEnergy = calculateTotalEnergy(G);
+          clearTrails();
+          syncUIWithState();
+          modal.classList.remove('open');
+          showToast("Custom Configuration Imported! 🚀");
+        } else {
+          alert("Invalid 3-Body JSON format.");
+        }
+      } catch (err) {
+        alert("Failed to parse JSON: " + err.message);
+      }
+    });
+
+    document.getElementById('btn-share-url').addEventListener('click', () => {
+      const stateStr = encodeURIComponent(JSON.stringify([
+        { m: mass[0], p: [pos[0], pos[1], pos[2]], v: [vel[0], vel[1], vel[2]] },
+        { m: mass[1], p: [pos[3], pos[4], pos[5]], v: [vel[3], vel[4], vel[5]] },
+        { m: mass[2], p: [pos[6], pos[7], pos[8]], v: [vel[6], vel[7], vel[8]] }
+      ]));
+      const shareUrl = `${window.location.origin}${window.location.pathname}#config=${stateStr}`;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast("Share URL Copied to Clipboard! 🔗");
+      });
+    });
+
+    function checkURLHash() {
+      if (window.location.hash.startsWith('#config=')) {
+        try {
+          const raw = decodeURIComponent(window.location.hash.substring(8));
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length === 3) {
+            for (let i = 0; i < 3; i++) {
+              const b = parsed[i];
+              mass[i] = b.m;
+              pos[i * 3]     = b.p[0]; pos[i * 3 + 1] = b.p[1]; pos[i * 3 + 2] = b.p[2];
+              vel[i * 3]     = b.v[0]; vel[i * 3 + 1] = b.v[1]; vel[i * 3 + 2] = b.v[2];
+            }
+            simTime = 0;
+            initialEnergy = calculateTotalEnergy(G);
+            clearTrails();
+            syncUIWithState();
+            showToast("Loaded Configuration from URL! 🌟");
+            return true;
+          }
+        } catch (e) {
+          console.error("Failed to load hash config", e);
+        }
+      }
+      return false;
+    }
+
+    // --- TELEMETRY UPDATE (Throttled for zero DOM lag) ---
+    const hudTime = document.getElementById('hud-time');
+    const hudEnergy = document.getElementById('hud-energy');
+    const hudError = document.getElementById('hud-error');
+    const hudMomentum = document.getElementById('hud-momentum');
+    const hudSpeeds = document.getElementById('hud-speeds');
+    const hudFps = document.getElementById('hud-fps');
+
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+
+    function updateTelemetryHUD() {
+      hudTime.textContent = simTime.toFixed(2);
+
+      const currentEnergy = calculateTotalEnergy(G);
+      hudEnergy.textContent = currentEnergy.toFixed(4);
+
+      const errorPercent = initialEnergy !== 0 
+        ? (Math.abs(currentEnergy - initialEnergy) / Math.abs(initialEnergy)) * 100 
+        : 0;
+      hudError.textContent = `${errorPercent.toFixed(3)}%`;
+      hudError.className = errorPercent < 1.0 ? 'hud-good' : (errorPercent < 5.0 ? 'hud-warn' : 'hud-val');
+
+      const L = calculateAngularMomentum();
+      hudMomentum.textContent = L.toFixed(4);
+
+      const v1 = Math.hypot(vel[0], vel[1], vel[2]);
+      const v2 = Math.hypot(vel[3], vel[4], vel[5]);
+      const v3 = Math.hypot(vel[6], vel[7], vel[8]);
+      hudSpeeds.textContent = `${v1.toFixed(2)}, ${v2.toFixed(2)}, ${v3.toFixed(2)}`;
+    }
+
+    // --- INTERSECTION OBSERVER (Idle when not visible) ---
+    const observer = new IntersectionObserver((entries) => {
+      isVisible = entries[0].isIntersecting;
+    }, { threshold: 0.05 });
+    observer.observe(container);
+
+    document.addEventListener('visibilitychange', () => {
+      isVisible = !document.hidden;
+    });
+
+    // --- ANIMATION & RENDER LOOP ---
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      if (!isVisible) return; // Completely idle offscreen
+
+      frameCount++;
+      if (now - lastFpsTime >= 500) {
+        const fps = Math.round((frameCount * 1000) / (now - lastFpsTime));
+        hudFps.textContent = `${fps} FPS`;
+        frameCount = 0;
+        lastFpsTime = now;
+      }
+
+      const delta = Math.min((now - lastTime) / 1000, 0.08);
+      lastTime = now;
+
+      // High-speed Zero-Allocation RK4 Physics Integration
+      if (!isPaused) {
+        const dt = (delta * simSpeed) / PHYSICS_SUBSTEPS;
+        for (let s = 0; s < PHYSICS_SUBSTEPS; s++) {
+          fastRK4Step(dt, G, softening);
+          simTime += dt;
+        }
+
+        if (autoCenter) {
+          const com = calculateCenterOfMass();
+          comMesh.position.set(com.x, com.y, com.z);
+        }
+
+        for (let i = 0; i < 3; i++) {
+          const i3 = i * 3;
+          recordTrailPoint(i, pos[i3], pos[i3 + 1], pos[i3 + 2]);
+        }
+
+        // Throttled DOM update (every 10 frames)
+        if (frameCount % 10 === 0) {
+          updateTelemetryHUD();
+        }
+      }
+
+      // Update 3D Object Positions
+      for (let i = 0; i < 3; i++) {
+        const i3 = i * 3;
+        bodyMeshes[i].position.set(pos[i3], pos[i3 + 1], pos[i3 + 2]);
+      }
+
+      // Update Gravity interaction lines
+      if (gravityLinesGroup.visible) {
+        const pairs = [0, 3,  3, 6,  6, 0];
+        for (let p = 0; p < 3; p++) {
+          const i3 = pairs[p * 2];
+          const j3 = pairs[p * 2 + 1];
+          const posAttr = gravityGeometries[p].attributes.position;
+          posAttr.setXYZ(0, pos[i3], pos[i3 + 1], pos[i3 + 2]);
+          posAttr.setXYZ(1, pos[j3], pos[j3 + 1], pos[j3 + 2]);
+          posAttr.needsUpdate = true;
+
+          const dist = Math.hypot(pos[j3] - pos[i3], pos[j3 + 1] - pos[i3 + 1], pos[j3 + 2] - pos[i3 + 2]);
+          gravityMaterials[p].opacity = Math.max(0.04, Math.min(0.35, 1.0 / (dist + 0.5)));
+        }
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // --- WINDOW RESIZE ---
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Initialize
+    if (!checkURLHash()) {
+      loadPreset('figure8');
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
