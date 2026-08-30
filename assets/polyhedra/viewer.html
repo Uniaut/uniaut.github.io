@@ -73,6 +73,48 @@
       case 'torus': // 토러스
         geometry = new THREE.TorusGeometry(0.85, 0.4, 16, 32);
         break;
+      case 'mobius':
+      case 'mobius_strip': {
+        const U = 160, V = 32, R = 1.15, w = 0.65;
+        const positions = [];
+        const colors = [];
+        const indices = [];
+        const colorBlue = new THREE.Color(0x0080ff);
+        const colorGrey = new THREE.Color(0xd1d5db);
+
+        for (let i = 0; i <= U; i++) {
+          const u = (i / U) * Math.PI * 2;
+          for (let j = 0; j <= V; j++) {
+            const v = -w / 2 + (j / V) * w;
+            const x = (R + v * Math.cos(u / 2)) * Math.cos(u);
+            const y = (R + v * Math.cos(u / 2)) * Math.sin(u);
+            const z = v * Math.sin(u / 2);
+            positions.push(x, y, z);
+
+            const tLoop = 0.5 + 0.5 * Math.sin(u) * Math.cos(u / 2);
+            const tHeight = 0.2 * (z / (w / 2 || 1));
+            const t = Math.max(0, Math.min(1, tLoop + tHeight));
+            const vertexColor = new THREE.Color().lerpColors(colorBlue, colorGrey, t);
+            colors.push(vertexColor.r, vertexColor.g, vertexColor.b);
+          }
+        }
+        for (let i = 0; i < U; i++) {
+          for (let j = 0; j < V; j++) {
+            const v0 = i * (V + 1) + j;
+            const v1 = (i + 1) * (V + 1) + j;
+            const v2 = (i + 1) * (V + 1) + (j + 1);
+            const v3 = i * (V + 1) + (j + 1);
+            indices.push(v0, v1, v2);
+            indices.push(v0, v2, v3);
+          }
+        }
+        geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        break;
+      }
       case 'cube':
       case 'hexahedron':
       default: // 정육면체 (6면체)
@@ -80,36 +122,53 @@
         break;
     }
 
-    // Flat-shaded light-gray translucent glass material matching exact blog cube face style
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
-      roughness: 0.2,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.22,
-      flatShading: true,
-      side: THREE.DoubleSide
-    });
+    const isMobius = shapeType === 'mobius' || shapeType === 'mobius_strip';
+
+    // Material setup: Smooth physical gradient for mobius, flatShaded glass for polyhedra
+    const material = isMobius
+      ? new THREE.MeshPhysicalMaterial({
+          vertexColors: true,
+          roughness: 0.15,
+          metalness: 0.08,
+          clearcoat: 0.9,
+          clearcoatRoughness: 0.1,
+          transparent: true,
+          opacity: 0.5,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          flatShading: false
+        })
+      : new THREE.MeshStandardMaterial({
+          color: 0xe2e8f0,
+          roughness: 0.2,
+          metalness: 0.1,
+          transparent: true,
+          opacity: 0.25,
+          flatShading: true,
+          side: THREE.DoubleSide
+        });
 
     const mesh = new THREE.Mesh(geometry, material);
 
-    // Soft gray edge wireframe outline matching CSS 1px border
-    const edges = new THREE.EdgesGeometry(geometry);
-    const lineMaterial = new THREE.LineBasicMaterial({ 
-      color: 0x6b7280, 
-      transparent: true, 
-      opacity: 0.35, 
-      linewidth: 1 
-    });
-    const wireframe = new THREE.LineSegments(edges, lineMaterial);
-    mesh.add(wireframe);
+    if (!isMobius) {
+      // Soft gray edge wireframe outline matching CSS 1px border
+      const edges = new THREE.EdgesGeometry(geometry);
+      const lineMaterial = new THREE.LineBasicMaterial({ 
+        color: 0x6b7280, 
+        transparent: true, 
+        opacity: 0.35, 
+        linewidth: 1 
+      });
+      const wireframe = new THREE.LineSegments(edges, lineMaterial);
+      mesh.add(wireframe);
+    }
 
     scene.add(mesh);
 
-    // Initial orientation: (0deg, 0deg, 45deg)
-    mesh.rotation.x = 0;
+    // Initial orientation
+    mesh.rotation.x = shapeType.includes('mobius') ? 25 * Math.PI / 180 : 0;
     mesh.rotation.y = 0;
-    mesh.rotation.z = 45 * Math.PI / 180;
+    mesh.rotation.z = shapeType.includes('mobius') ? 35 * Math.PI / 180 : 45 * Math.PI / 180;
 
     let lastTime = performance.now();
 

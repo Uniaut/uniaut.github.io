@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dual Pendulum Chaos Simulation</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #ffffff 0%, #f1f5f9 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+    // Strict 30 FPS Cap
+    const TARGET_FPS = 30;
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
+    let lastFrameTime = 0;
+
+    // Canvas scaling & origin (Optimized DPR for low-spec devices)
+    let width = 0;
+    let height = 0;
+    let originX = 0;
+    let originY = 0;
+    let dpr = 1;
+    let L1 = 100;
+    let L2 = 100;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.scale(dpr, dpr);
+
+      originX = width / 2;
+      originY = height * 0.48;
+
+      const scale = Math.min(width, height) / 360;
+      L1 = Math.max(50, Math.min(125, 85 * scale));
+      L2 = Math.max(50, Math.min(125, 85 * scale));
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Physics parameters (Standard SI dimensionless scaling)
+    const g = 9.81 * 90;
+    const m1 = 10;
+    const m2 = 10;
+    const MAX_TRAIL = 240; // 8 seconds of trail at 30 FPS
+    const ENSEMBLE_COUNT = 6;
+
+    // Harmonic palette for light theme
+    const PALETTE = [
+      { stroke: '#2563eb', head: '#1d4ed8' }, // Cobalt Blue
+      { stroke: '#0284c7', head: '#0369a1' }, // Sky Azure
+      { stroke: '#0d9488', head: '#0f766e' }, // Teal
+      { stroke: '#7c3aed', head: '#6d28d9' }, // Violet
+      { stroke: '#e11d48', head: '#be123c' }, // Crimson Rose
+      { stroke: '#d97706', head: '#b45309' }  // Amber Ochre
+    ];
+
+    class Pendulum {
+      constructor(th1, th2, colorIndex) {
+        this.th1 = th1;
+        this.th2 = th2;
+        this.w1 = 0;
+        this.w2 = 0;
+        this.color = PALETTE[colorIndex % PALETTE.length];
+        this.trail = [];
+      }
+
+      getPositions() {
+        const x1 = originX + L1 * Math.sin(this.th1);
+        const y1 = originY + L1 * Math.cos(this.th1);
+        const x2 = x1 + L2 * Math.sin(this.th2);
+        const y2 = y1 + L2 * Math.cos(this.th2);
+        return { x1, y1, x2, y2 };
+      }
+    }
+
+    let pendulums = [];
+
+    function initHighEnergyChaos() {
+      pendulums = [];
+      const baseTh1 = Math.PI * 0.985;
+      const baseTh2 = Math.PI * 0.985;
+      const delta = 0.00015;
+
+      for (let i = 0; i < ENSEMBLE_COUNT; i++) {
+        const p = new Pendulum(baseTh1 + i * delta, baseTh2 + i * delta, i);
+        pendulums.push(p);
+      }
+    }
+    initHighEnergyChaos();
+
+    // Exact Lagrangian Dynamics Derivatives
+    function derivatives(th1, th2, w1, w2) {
+      const dth = th1 - th2;
+      const num1 = -g * (2 * m1 + m2) * Math.sin(th1) - m2 * g * Math.sin(th1 - 2 * th2) - 2 * Math.sin(dth) * m2 * (w2 * w2 * L2 + w1 * w1 * L1 * Math.cos(dth));
+      const den1 = L1 * (2 * m1 + m2 - m2 * Math.cos(2 * dth));
+      const a1 = num1 / den1;
+
+      const num2 = 2 * Math.sin(dth) * (w1 * w1 * L1 * (m1 + m2) + g * (m1 + m2) * Math.cos(th1) + w2 * w2 * L2 * m2 * Math.cos(dth));
+      const den2 = L2 * (2 * m1 + m2 - m2 * Math.cos(2 * dth));
+      const a2 = num2 / den2;
+
+      return [w1, w2, a1, a2];
+    }
+
+    // Runge-Kutta 4th Order Integrator
+    function rk4Step(p, dt) {
+      const { th1, th2, w1, w2 } = p;
+      const [dw1_1, dw2_1, a1_1, a2_1] = derivatives(th1, th2, w1, w2);
+      const [dw1_2, dw2_2, a1_2, a2_2] = derivatives(th1 + 0.5 * dt * dw1_1, th2 + 0.5 * dt * dw2_1, w1 + 0.5 * dt * a1_1, w2 + 0.5 * dt * a2_1);
+      const [dw1_3, dw2_3, a1_3, a2_3] = derivatives(th1 + 0.5 * dt * dw1_2, th2 + 0.5 * dt * dw2_2, w1 + 0.5 * dt * a1_2, w2 + 0.5 * dt * a2_2);
+      const [dw1_4, dw2_4, a1_4, a2_4] = derivatives(th1 + dt * dw1_3, th2 + dt * dw2_3, w1 + dt * a1_3, w2 + dt * a2_3);
+
+      p.th1 += (dt / 6) * (dw1_1 + 2 * dw1_2 + 2 * dw1_3 + dw1_4);
+      p.th2 += (dt / 6) * (dw2_1 + 2 * dw2_2 + 2 * dw2_3 + dw2_4);
+      p.w1 += (dt / 6) * (a1_1 + 2 * a1_2 + 2 * a1_3 + a1_4);
+      p.w2 += (dt / 6) * (a2_1 + 2 * a2_2 + 2 * a2_3 + a2_4);
+
+      p.w1 *= 0.999995;
+      p.w2 *= 0.999995;
+    }
+
+    // Main 30 FPS Loop
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      // Strict 30 FPS Cap
+      const elapsed = now - lastFrameTime;
+      if (elapsed < FRAME_INTERVAL - 1) {
+        return;
+      }
+      lastFrameTime = now - (elapsed % FRAME_INTERVAL);
+
+      // Lightweight 8 substeps of RK4 per frame (exact 30 FPS physical stability)
+      const substeps = 8;
+      const dt = (1 / 30) / substeps;
+      for (let s = 0; s < substeps; s++) {
+        for (let i = 0; i < pendulums.length; i++) {
+          rk4Step(pendulums[i], dt);
+        }
+      }
+
+      // Record trailing path
+      for (let i = 0; i < pendulums.length; i++) {
+        const p = pendulums[i];
+        const pos = p.getPositions();
+        p.trail.push({ x: pos.x2, y: pos.y2 });
+        if (p.trail.length > MAX_TRAIL) {
+          p.trail.shift();
+        }
+      }
+
+      // Clear frame with background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // 1. Draw batched trajectory trails (Optimized from 3900 draw calls to ~48 draw calls)
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const numChunks = 8;
+      for (let i = 0; i < pendulums.length; i++) {
+        const p = pendulums[i];
+        const trail = p.trail;
+        if (trail.length < 2) continue;
+
+        const chunkSize = Math.ceil(trail.length / numChunks);
+        for (let c = 0; c < numChunks; c++) {
+          const startIdx = c * chunkSize;
+          const endIdx = Math.min(startIdx + chunkSize + 1, trail.length);
+          if (startIdx >= trail.length - 1) break;
+
+          const progress = (startIdx + (endIdx - startIdx) / 2) / trail.length;
+          const alpha = progress * 0.75;
+          if (alpha <= 0.02) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(trail[startIdx].x, trail[startIdx].y);
+          for (let t = startIdx + 1; t < endIdx; t++) {
+            ctx.lineTo(trail[t].x, trail[t].y);
+          }
+          ctx.strokeStyle = p.color.stroke;
+          ctx.globalAlpha = alpha;
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1.0;
+
+      // 2. Draw central pivot base
+      ctx.beginPath();
+      ctx.arc(originX, originY, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#94a3b8';
+      ctx.stroke();
+
+      // 3. Draw rods and bobs
+      for (let i = pendulums.length - 1; i >= 0; i--) {
+        const p = pendulums[i];
+        const pos = p.getPositions();
+        const isMain = i === 0;
+
+        ctx.lineWidth = isMain ? 2.0 : 1.0;
+        ctx.strokeStyle = isMain ? 'rgba(30, 41, 59, 0.65)' : 'rgba(100, 116, 139, 0.3)';
+
+        // Rod 1
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(pos.x1, pos.y1);
+        ctx.stroke();
+
+        // Rod 2
+        ctx.beginPath();
+        ctx.moveTo(pos.x1, pos.y1);
+        ctx.lineTo(pos.x2, pos.y2);
+        ctx.stroke();
+
+        // Mid joint bob
+        ctx.beginPath();
+        ctx.arc(pos.x1, pos.y1, isMain ? 5 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = isMain ? '#0284c7' : '#94a3b8';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        // Tip bob
+        ctx.beginPath();
+        ctx.arc(pos.x2, pos.y2, isMain ? 7 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = p.color.head;
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
