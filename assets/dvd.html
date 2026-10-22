@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>DVD Video Bouncing Screensaver / DVD 스크린세이버</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", Pretendard, "Segoe UI", Roboto, sans-serif;
+      background-color: #050505;
+      color: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Screen Frame Modes */
+    #screen-viewport {
+      position: relative;
+      background-color: #000000;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 4:3 Ratio (Default & Clipboard Match) */
+    #screen-viewport.ratio-4-3 {
+      width: 100%;
+      height: 100%;
+      max-width: calc(100vh * (4 / 3));
+      max-height: calc(100vw * (3 / 4));
+      aspect-ratio: 4 / 3;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      box-shadow: 0 0 80px rgba(0, 0, 0, 0.95), 0 0 30px rgba(20, 255, 81, 0.05);
+    }
+
+    /* 16:9 Ratio */
+    #screen-viewport.ratio-16-9 {
+      width: 100%;
+      height: 100%;
+      max-width: calc(100vh * (16 / 9));
+      max-height: calc(100vw * (9 / 16));
+      aspect-ratio: 16 / 9;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      box-shadow: 0 0 80px rgba(0, 0, 0, 0.95);
+    }
+
+    /* Full Window Fill */
+    #screen-viewport.ratio-full {
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      max-height: none;
+      border: none;
+      border-radius: 0;
+    }
+
+    /* CRT Scanline & Phosphor Grid Overlay */
+    .crt-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      opacity: 0.5;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    .crt-overlay.disabled {
+      opacity: 0;
+    }
+
+    /* DVD Box (Strictly 3:2 Ratio) */
+    .dvd-box {
+      position: absolute;
+      top: 0;
+      left: 0;
+      aspect-ratio: 3 / 2;
+      cursor: grab;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
+      z-index: 5;
+    }
+    .dvd-box:active {
+      cursor: grabbing;
+    }
+    .dvd-box svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* Floating Glassmorphic Toolbar */
+    .toolbar {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      z-index: 50;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+    .btn-icon {
+      width: 32px;
+      padding: 0;
+    }
+
+    /* Telemetry HUD */
+    .telemetry {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: rgba(255, 255, 255, 0.55);
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* Corner Hit Celebration Toast */
+    .corner-toast {
+      position: absolute;
+      top: 68px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffe600;
+      background: rgba(20, 20, 20, 0.85);
+      border: 2px solid #ffe600;
+      box-shadow: 0 0 25px rgba(255, 230, 0, 0.5);
+      padding: 8px 18px;
+      border-radius: 9999px;
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .corner-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* Screen Flash Effect on Corner Hit */
+    .flash-overlay {
+      position: absolute;
+      inset: 0;
+      background: #ffffff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 30;
+      transition: opacity 0.1s ease-out;
+    }
+    .flash-overlay.active {
+      opacity: 0.35;
+    }
+
+    /* FX Canvas */
+    #fx-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 25;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Container with strict Aspect Ratio Control -->
+  <div id="screen-viewport" class="ratio-4-3">
+    <div class="crt-overlay" id="crt-overlay"></div>
+    <div class="flash-overlay" id="flash-overlay"></div>
+    <canvas id="fx-canvas"></canvas>
+
+    <!-- DVD Box Component (Exactly 3:2 Ratio) -->
+    <div id="dvd-box" class="dvd-box">
+      <svg id="dvd-svg" viewBox="0 0 138 92" style="background-color: #14ff51;">
+        <!-- DVD Typography Path -->
+        <g transform="translate(8.8, -44.2) scale(0.672, 0.672)">
+          <g transform="matrix(1.25, 0, 0, -1.25, -10.96875, 185.84375)">
+            <path d="M 76.225,148.675 46.4,148.65 l -22.525,0 -2.275,-9.6 17,0 3.975,0 c 10.9172,0 17.5762,-4.378 15.725,-12.175 -2.0172,-8.493 -11.5621,-12.2 -21.7,-12.2 l -3.8,0 4.95,20.825 -16.975,0 -7.225,-30.425 24.075,0 c 18.1086,0 35.3187,9.582 38.35,21.8 0.5555,2.24 0.4929,7.835 -0.875,11.175 -0.0344,0.129 -0.0758,0.234 -0.2,0.5 -0.05,0.108 -0.0852,0.593 0.2,0.7 0.157,0.059 0.4394,-0.236 0.475,-0.325 0.1418,-0.373 0.25,-0.65 0.25,-0.65 L 91.15,95 l 39.025,44.05 16.525,0 3.975,0 c 10.918,0 17.652,-4.378 15.8,-12.175 -2.018,-8.493 -11.61,-12.2 -21.75,-12.2 l -3.825,0 4.95,20.825 -16.975,0 -7.225,-30.425 24.1,0 c 18.112,0 35.444,9.552 38.35,21.8 2.911,12.246 -9.829,21.775 -28.025,21.775 l -35.925,0 c 0,0 -9.509,-11.272 -11.275,-13.4 -9.579448,-11.5368 -11.191504,-14.52137 -11.45,-15.275 -0.01304,-0.18644 -0.05,-0.275 -0.05,-0.275 0,0 -0.01848,0.0754 0.05,0.275 0.05152,0.73559 -0.242,3.69184 -4.35,15.425 -1.0766,3.076 -4.55,13.25 -4.55,13.25 l -12.3,0 0,0.025 z" fill="#000000" fill-rule="evenodd"/>
+          </g>
+        </g>
+        <!-- Disc Ellipse -->
+        <ellipse cx="69" cy="65" rx="54" ry="8.5" fill="#000000" />
+        <!-- VIDEO text cutout with dynamic fill -->
+        <text id="dvd-text" x="69" y="68.2" fill="#14ff51" 
+              font-family="Impact, 'Arial Black', -apple-system, sans-serif" 
+              font-weight="900" 
+              font-size="8.8" 
+              letter-spacing="4.6" 
+              text-anchor="middle">VIDEO</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Glassmorphic Toolbar -->
+  <div class="toolbar">
+    <button class="btn btn-icon" id="btn-play" title="Play / Pause (Space)">⏸</button>
+    <button class="btn" id="btn-color" title="Change Color (C)">🎨 Color</button>
+    <button class="btn" id="btn-speed" title="Cycle Speed (1x / 2x / 0.5x)">⚡ 1.0x</button>
+    <button class="btn active" id="btn-ratio" title="Aspect Ratio Mode">📺 4:3</button>
+    <button class="btn active" id="btn-crt" title="Toggle CRT Scanline">📼 CRT</button>
+    <button class="btn btn-icon" id="btn-sound" title="Toggle Sound (M)">🔊</button>
+    <button class="btn btn-icon" id="btn-reset" title="Reset (R)">🎲</button>
+    <button class="btn btn-icon" id="btn-fullscreen" title="Toggle Fullscreen (F)">⛶</button>
+  </div>
+
+  <div class="telemetry" id="telemetry">FPS: 60 | Bounces: 0 | Corners: 0 | Ratio: 4:3 (Fixed)</div>
+  <div class="corner-toast" id="corner-toast">🎉 CORNER HIT! (x<span id="toast-count">1</span>)</div>
+
+  <script>
+    const viewport = document.getElementById('screen-viewport');
+    const dvdBox = document.getElementById('dvd-box');
+    const dvdSvg = document.getElementById('dvd-svg');
+    const dvdText = document.getElementById('dvd-text');
+    const telemetry = document.getElementById('telemetry');
+    const cornerToast = document.getElementById('corner-toast');
+    const toastCount = document.getElementById('toast-count');
+    const flashOverlay = document.getElementById('flash-overlay');
+    const crtOverlay = document.getElementById('crt-overlay');
+    const fxCanvas = document.getElementById('fx-canvas');
+    const fxCtx = fxCanvas.getContext('2d');
+
+    // Toolbar Buttons
+    const btnPlay = document.getElementById('btn-play');
+    const btnColor = document.getElementById('btn-color');
+    const btnSpeed = document.getElementById('btn-speed');
+    const btnRatio = document.getElementById('btn-ratio');
+    const btnCrt = document.getElementById('btn-crt');
+    const btnSound = document.getElementById('btn-sound');
+    const btnReset = document.getElementById('btn-reset');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+
+    // Vibrant Neon Palette (0 is original green from screenshot)
+    const PALETTE = [
+      { hex: '#14ff51', name: 'Lime Neon' },
+      { hex: '#00e5ff', name: 'Electric Cyan' },
+      { hex: '#ff007f', name: 'Hot Pink' },
+      { hex: '#ffe600', name: 'Laser Yellow' },
+      { hex: '#ff6600', name: 'Solar Orange' },
+      { hex: '#b026ff', name: 'Electric Purple' },
+      { hex: '#2979ff', name: 'Hyper Blue' },
+      { hex: '#ff1744', name: 'Crimson Red' },
+      { hex: '#00ffa3', name: 'Spring Mint' }
+    ];
+    let currentColorIdx = 0;
+
+    function applyColor(idx) {
+      currentColorIdx = idx % PALETTE.length;
+      const c = PALETTE[currentColorIdx];
+      dvdSvg.style.backgroundColor = c.hex;
+      dvdText.setAttribute('fill', c.hex);
+    }
+
+    function cycleColor() {
+      let next = (currentColorIdx + 1 + Math.floor(Math.random() * (PALETTE.length - 2))) % PALETTE.length;
+      if (next === currentColorIdx) next = (currentColorIdx + 1) % PALETTE.length;
+      applyColor(next);
+      playBipSound();
+    }
+
+    // Audio Synthesis (Web Audio API - No external assets)
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playBipSound() {
+      if (!soundEnabled) return;
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(320 + Math.random() * 80, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(160, audioCtx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.09);
+    }
+
+    function playCornerFanfare() {
+      if (!soundEnabled) return;
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.07);
+
+        gain.gain.setValueAtTime(0, audioCtx.currentTime + i * 0.07);
+        gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + i * 0.07 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.07 + 0.25);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + i * 0.07);
+        osc.stop(audioCtx.currentTime + i * 0.07 + 0.26);
+      });
+    }
+
+    // Geometry & Dynamics
+    let screenW = 0;
+    let screenH = 0;
+    let boxW = 0;
+    let boxH = 0;
+
+    let posX = 0;
+    let posY = 0;
+    let baseSpeed = 2.4;
+    let speedMultiplier = 1.0;
+    let velX = 2.4;
+    let velY = 2.4;
+
+    let bounceCount = 0;
+    let cornerHits = 0;
+    let isPaused = false;
+    let ratioMode = '4-3'; // '4-3', '16-9', 'full'
+
+    // FPS Meter
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+
+    // Confetti / Corner Hit Particles
+    let particles = [];
+
+    function resize() {
+      const rect = viewport.getBoundingClientRect();
+      screenW = rect.width;
+      screenH = rect.height;
+
+      fxCanvas.width = screenW;
+      fxCanvas.height = screenH;
+
+      // Maintain box aspect ratio (3:2) and relative size
+      boxW = Math.max(70, Math.min(220, screenW * 0.2156));
+      boxH = boxW * (2 / 3);
+
+      dvdBox.style.width = boxW + 'px';
+      dvdBox.style.height = boxH + 'px';
+
+      // Keep within bounds
+      if (posX + boxW > screenW) posX = Math.max(0, screenW - boxW);
+      if (posY + boxH > screenH) posY = Math.max(0, screenH - boxH);
+    }
+    window.addEventListener('resize', resize);
+
+    function initPhysics() {
+      resize();
+      posX = (screenW - boxW) / 2;
+      posY = (screenH - boxH) / 2;
+      const angle = (Math.PI / 4) + (Math.random() * 0.1 - 0.05);
+      const effectiveSpeed = baseSpeed * speedMultiplier;
+      velX = Math.cos(angle) * effectiveSpeed * (Math.random() > 0.5 ? 1 : -1);
+      velY = Math.sin(angle) * effectiveSpeed * (Math.random() > 0.5 ? 1 : -1);
+      applyColor(0);
+    }
+    initPhysics();
+
+    // Trigger Corner Hit
+    function triggerCornerHit(cornerX, cornerY) {
+      cornerHits++;
+      toastCount.textContent = cornerHits;
+      cornerToast.classList.add('show');
+      flashOverlay.classList.add('active');
+      setTimeout(() => flashOverlay.classList.remove('active'), 120);
+      setTimeout(() => cornerToast.classList.remove('show'), 2600);
+
+      playCornerFanfare();
+
+      const color = PALETTE[currentColorIdx].hex;
+      for (let i = 0; i < 60; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const speed = 2.5 + Math.random() * 7;
+        particles.push({
+          x: cornerX,
+          y: cornerY,
+          vx: Math.cos(theta) * speed,
+          vy: Math.sin(theta) * speed,
+          size: 3 + Math.random() * 5,
+          color: Math.random() > 0.3 ? color : '#ffe600',
+          alpha: 1.0,
+          decay: 0.012 + Math.random() * 0.018
+        });
+      }
+    }
+
+    // Dragging Physics
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    let dragTime = 0;
+
+    dvdBox.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      initAudio();
+      const rect = dvdBox.getBoundingClientRect();
+      const vRect = viewport.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      dragTime = performance.now();
+      dvdBox.setPointerCapture(e.pointerId);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const vRect = viewport.getBoundingClientRect();
+      posX = Math.max(0, Math.min(screenW - boxW, e.clientX - vRect.left - dragOffsetX));
+      posY = Math.max(0, Math.min(screenH - boxH, e.clientY - vRect.top - dragOffsetY));
+      dvdBox.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+
+      const now = performance.now();
+      const dt = Math.max(1, now - dragTime);
+      velX = ((e.clientX - lastDragX) / dt) * 16.6;
+      velY = ((e.clientY - lastDragY) / dt) * 16.6;
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      dragTime = now;
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      // Clamp velocity to reasonable limits
+      const curSpeed = Math.hypot(velX, velY);
+      const targetSpeed = baseSpeed * speedMultiplier;
+      if (curSpeed < 1.0) {
+        const angle = Math.PI / 4;
+        velX = Math.cos(angle) * targetSpeed * (Math.random() > 0.5 ? 1 : -1);
+        velY = Math.sin(angle) * targetSpeed * (Math.random() > 0.5 ? 1 : -1);
+      } else {
+        velX = (velX / curSpeed) * targetSpeed;
+        velY = (velY / curSpeed) * targetSpeed;
+      }
+    });
+
+    // Main Animation Loop
+    function update(now) {
+      requestAnimationFrame(update);
+      if (isPaused) return;
+
+      const elapsed = now - lastTime;
+      lastTime = now;
+      frameCount++;
+      if (frameCount % 20 === 0) {
+        fps = Math.round(1000 / Math.max(1, elapsed));
+        telemetry.textContent = `FPS: ${Math.min(60, fps)} | Bounces: ${bounceCount} | Corners: ${cornerHits} | Ratio: ${ratioMode.toUpperCase()} | Color: ${PALETTE[currentColorIdx].name}`;
+      }
+
+      if (!isDragging) {
+        const dt = Math.min(elapsed / 16.666, 2.0);
+        posX += velX * dt;
+        posY += velY * dt;
+
+        let hitX = false;
+        let hitY = false;
+
+        // X collision
+        if (posX <= 0) {
+          posX = 0;
+          velX = Math.abs(velX);
+          hitX = true;
+        } else if (posX + boxW >= screenW) {
+          posX = screenW - boxW;
+          velX = -Math.abs(velX);
+          hitX = true;
+        }
+
+        // Y collision
+        if (posY <= 0) {
+          posY = 0;
+          velY = Math.abs(velY);
+          hitY = true;
+        } else if (posY + boxH >= screenH) {
+          posY = screenH - boxH;
+          velY = -Math.abs(velY);
+          hitY = true;
+        }
+
+        if (hitX || hitY) {
+          bounceCount++;
+          cycleColor();
+
+          // Corner Hit Detection
+          if (hitX && hitY) {
+            const cx = velX > 0 ? 0 : screenW;
+            const cy = velY > 0 ? 0 : screenH;
+            triggerCornerHit(cx, cy);
+          }
+        }
+
+        dvdBox.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+      }
+
+      // Render FX Particles
+      if (particles.length > 0) {
+        fxCtx.clearRect(0, 0, screenW, screenH);
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.08;
+          p.alpha -= p.decay;
+
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          fxCtx.beginPath();
+          fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          fxCtx.fillStyle = p.color;
+          fxCtx.globalAlpha = p.alpha;
+          fxCtx.fill();
+        }
+        fxCtx.globalAlpha = 1.0;
+      }
+    }
+    requestAnimationFrame(update);
+
+    // Toolbar Handlers
+    btnPlay.addEventListener('click', () => {
+      isPaused = !isPaused;
+      btnPlay.textContent = isPaused ? '▶' : '⏸';
+      btnPlay.classList.toggle('active', isPaused);
+    });
+
+    btnColor.addEventListener('click', () => {
+      cycleColor();
+    });
+
+    const SPEEDS = [1.0, 2.0, 3.5, 0.5];
+    let speedIdx = 0;
+    btnSpeed.addEventListener('click', () => {
+      speedIdx = (speedIdx + 1) % SPEEDS.length;
+      speedMultiplier = SPEEDS[speedIdx];
+      btnSpeed.textContent = `⚡ ${speedMultiplier}x`;
+      const cur = Math.hypot(velX, velY);
+      if (cur > 0) {
+        const target = baseSpeed * speedMultiplier;
+        velX = (velX / cur) * target;
+        velY = (velY / cur) * target;
+      }
+    });
+
+    const RATIOS = ['4-3', '16-9', 'full'];
+    const RATIO_LABELS = { '4-3': '📺 4:3', '16-9': '🎬 16:9', 'full': '⛶ Full' };
+    btnRatio.addEventListener('click', () => {
+      viewport.classList.remove(`ratio-${ratioMode}`);
+      const curIdx = RATIOS.indexOf(ratioMode);
+      ratioMode = RATIOS[(curIdx + 1) % RATIOS.length];
+      viewport.classList.add(`ratio-${ratioMode}`);
+      btnRatio.textContent = RATIO_LABELS[ratioMode];
+      setTimeout(resize, 100);
+    });
+
+    btnCrt.addEventListener('click', () => {
+      crtOverlay.classList.toggle('disabled');
+      btnCrt.classList.toggle('active', !crtOverlay.classList.contains('disabled'));
+    });
+
+    btnSound.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      btnSound.textContent = soundEnabled ? '🔊' : '🔇';
+      btnSound.classList.toggle('active', soundEnabled);
+    });
+
+    btnReset.addEventListener('click', () => {
+      bounceCount = 0;
+      cornerHits = 0;
+      initPhysics();
+      applyColor(0);
+    });
+
+    btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        btnPlay.click();
+      } else if (e.code === 'KeyC') {
+        cycleColor();
+      } else if (e.code === 'KeyR') {
+        btnReset.click();
+      } else if (e.code === 'KeyF') {
+        btnFullscreen.click();
+      } else if (e.code === 'KeyM') {
+        btnSound.click();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>DVD Video Bouncing Screensaver (Embed)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard Variable", Pretendard, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* 4:3 Aspect Ratio Screen Container */
+    #screen-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: calc(100vh * (4 / 3));
+      max-height: calc(100vw * (3 / 4));
+      aspect-ratio: 4 / 3;
+      background-color: #000000;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(255, 255, 255, 0.03);
+    }
+
+    /* Subtle CRT screen scanline / curvature vibe */
+    #screen-container::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      opacity: 0.45;
+      z-index: 10;
+    }
+
+    /* DVD Logo Box: Exactly 3:2 Aspect Ratio */
+    .dvd-box {
+      position: absolute;
+      top: 0;
+      left: 0;
+      aspect-ratio: 3 / 2;
+      cursor: pointer;
+      will-change: transform;
+      transform: translate3d(0, 0, 0);
+      z-index: 5;
+    }
+
+    .dvd-box svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Minimal HUD */
+    .hud {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: rgba(255, 255, 255, 0.4);
+      z-index: 20;
+      pointer-events: none;
+      letter-spacing: 0.5px;
+    }
+
+    .corner-badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #ffe600;
+      background: rgba(255, 230, 0, 0.15);
+      border: 1px solid rgba(255, 230, 0, 0.3);
+      padding: 3px 8px;
+      border-radius: 9999px;
+      z-index: 20;
+      opacity: 0;
+      transform: scale(0.9);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+    .corner-badge.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Particle Canvas for Corner Hit Celebration */
+    #fx-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 15;
+    }
+  </style>
+</head>
+<body>
+  <div id="screen-container">
+    <canvas id="fx-canvas"></canvas>
+    
+    <div id="dvd-box" class="dvd-box">
+      <svg id="dvd-svg" viewBox="0 0 138 92" style="background-color: #14ff51;">
+        <!-- DVD Typography Path -->
+        <g transform="translate(8.8, -44.2) scale(0.672, 0.672)">
+          <g transform="matrix(1.25, 0, 0, -1.25, -10.96875, 185.84375)">
+            <path d="M 76.225,148.675 46.4,148.65 l -22.525,0 -2.275,-9.6 17,0 3.975,0 c 10.9172,0 17.5762,-4.378 15.725,-12.175 -2.0172,-8.493 -11.5621,-12.2 -21.7,-12.2 l -3.8,0 4.95,20.825 -16.975,0 -7.225,-30.425 24.075,0 c 18.1086,0 35.3187,9.582 38.35,21.8 0.5555,2.24 0.4929,7.835 -0.875,11.175 -0.0344,0.129 -0.0758,0.234 -0.2,0.5 -0.05,0.108 -0.0852,0.593 0.2,0.7 0.157,0.059 0.4394,-0.236 0.475,-0.325 0.1418,-0.373 0.25,-0.65 0.25,-0.65 L 91.15,95 l 39.025,44.05 16.525,0 3.975,0 c 10.918,0 17.652,-4.378 15.8,-12.175 -2.018,-8.493 -11.61,-12.2 -21.75,-12.2 l -3.825,0 4.95,20.825 -16.975,0 -7.225,-30.425 24.1,0 c 18.112,0 35.444,9.552 38.35,21.8 2.911,12.246 -9.829,21.775 -28.025,21.775 l -35.925,0 c 0,0 -9.509,-11.272 -11.275,-13.4 -9.579448,-11.5368 -11.191504,-14.52137 -11.45,-15.275 -0.01304,-0.18644 -0.05,-0.275 -0.05,-0.275 0,0 -0.01848,0.0754 0.05,0.275 0.05152,0.73559 -0.242,3.69184 -4.35,15.425 -1.0766,3.076 -4.55,13.25 -4.55,13.25 l -12.3,0 0,0.025 z" fill="#000000" fill-rule="evenodd"/>
+          </g>
+        </g>
+        <!-- Disc Ellipse -->
+        <ellipse cx="69" cy="65" rx="54" ry="8.5" fill="#000000" />
+        <!-- VIDEO text cutout with dynamic fill -->
+        <text id="dvd-text" x="69" y="68.2" fill="#14ff51" 
+              font-family="Impact, 'Arial Black', -apple-system, sans-serif" 
+              font-weight="900" 
+              font-size="8.8" 
+              letter-spacing="4.6" 
+              text-anchor="middle">VIDEO</text>
+      </svg>
+    </div>
+
+    <div class="corner-badge" id="corner-badge">🎉 CORNER HIT! (x<span id="corner-count">0</span>)</div>
+    <div class="hud" id="hud">DVD Video &bull; 4:3 Ratio Fixed &bull; Bounces: 0</div>
+  </div>
+
+  <script>
+    const container = document.getElementById('screen-container');
+    const dvdBox = document.getElementById('dvd-box');
+    const dvdSvg = document.getElementById('dvd-svg');
+    const dvdText = document.getElementById('dvd-text');
+    const hud = document.getElementById('hud');
+    const cornerBadge = document.getElementById('corner-badge');
+    const cornerCountEl = document.getElementById('corner-count');
+    const fxCanvas = document.getElementById('fx-canvas');
+    const fxCtx = fxCanvas.getContext('2d');
+
+    // Vibrant Neon Palette (Original green first)
+    const PALETTE = [
+      '#14ff51', // Signature Neon Green (Clipboard match)
+      '#00e5ff', // Neon Cyan
+      '#ff007f', // Electric Pink
+      '#ffe600', // Neon Yellow
+      '#ff6600', // Bright Orange
+      '#b026ff', // Electric Violet
+      '#2979ff', // Cobalt Blue
+      '#ff1744', // Neon Crimson
+      '#00ffa3'  // Neon Mint
+    ];
+    let currentColorIndex = 0;
+
+    function applyColor(index) {
+      currentColorIndex = index % PALETTE.length;
+      const color = PALETTE[currentColorIndex];
+      dvdSvg.style.backgroundColor = color;
+      dvdText.setAttribute('fill', color);
+    }
+
+    function nextColor() {
+      let nextIdx = (currentColorIndex + 1 + Math.floor(Math.random() * (PALETTE.length - 2))) % PALETTE.length;
+      if (nextIdx === currentColorIndex) nextIdx = (currentColorIndex + 1) % PALETTE.length;
+      applyColor(nextIdx);
+    }
+
+    // Fixed Dimensions & Ratios
+    let screenW = 0;
+    let screenH = 0;
+    let boxW = 0;
+    let boxH = 0;
+
+    // Position & Velocity
+    let posX = 0;
+    let posY = 0;
+    let velX = 2.0;
+    let velY = 2.0;
+    const SPEED = 2.2;
+
+    let bounceCount = 0;
+    let cornerHits = 0;
+    let isPaused = false;
+
+    // Particles for Corner Hit
+    let particles = [];
+
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      screenW = rect.width;
+      screenH = rect.height;
+
+      fxCanvas.width = screenW;
+      fxCanvas.height = screenH;
+
+      // Maintain box aspect ratio (3:2) and relative size (approx 21.5% of width)
+      boxW = Math.max(70, Math.min(220, screenW * 0.2156));
+      boxH = boxW * (2 / 3); // Strictly 3:2 ratio
+
+      dvdBox.style.width = boxW + 'px';
+      dvdBox.style.height = boxH + 'px';
+
+      // Keep inside bounds
+      if (posX + boxW > screenW) posX = Math.max(0, screenW - boxW);
+      if (posY + boxH > screenH) posY = Math.max(0, screenH - boxH);
+    }
+
+    window.addEventListener('resize', resize);
+
+    // Initial position centered or slightly offset
+    function init() {
+      resize();
+      posX = (screenW - boxW) / 2;
+      posY = (screenH - boxH) / 2;
+      const angle = (Math.PI / 4) + (Math.random() * 0.1 - 0.05); // near 45 degrees
+      velX = Math.cos(angle) * SPEED * (Math.random() > 0.5 ? 1 : -1);
+      velY = Math.sin(angle) * SPEED * (Math.random() > 0.5 ? 1 : -1);
+      applyColor(0);
+    }
+    init();
+
+    // Spawn celebration confetti / particles
+    function triggerCornerHit(cornerX, cornerY) {
+      cornerHits++;
+      cornerCountEl.textContent = cornerHits;
+      cornerBadge.classList.add('visible');
+      setTimeout(() => cornerBadge.classList.remove('visible'), 3000);
+
+      const color = PALETTE[currentColorIndex];
+      for (let i = 0; i < 40; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 6;
+        particles.push({
+          x: cornerX,
+          y: cornerY,
+          vx: Math.cos(theta) * speed,
+          vy: Math.sin(theta) * speed,
+          size: 3 + Math.random() * 4,
+          color: Math.random() > 0.3 ? color : '#ffffff',
+          alpha: 1.0,
+          decay: 0.015 + Math.random() * 0.02
+        });
+      }
+    }
+
+    // Animation Loop (60 FPS / GPU RAF)
+    let lastTime = performance.now();
+
+    function update(now) {
+      requestAnimationFrame(update);
+      if (isPaused) return;
+
+      const dt = Math.min((now - lastTime) / 16.666, 2.0); // normalize dt to 60fps
+      lastTime = now;
+
+      posX += velX * dt;
+      posY += velY * dt;
+
+      let hitX = false;
+      let hitY = false;
+
+      // Horizontal Collision
+      if (posX <= 0) {
+        posX = 0;
+        velX = Math.abs(velX);
+        hitX = true;
+      } else if (posX + boxW >= screenW) {
+        posX = screenW - boxW;
+        velX = -Math.abs(velX);
+        hitX = true;
+      }
+
+      // Vertical Collision
+      if (posY <= 0) {
+        posY = 0;
+        velY = Math.abs(velY);
+        hitY = true;
+      } else if (posY + boxH >= screenH) {
+        posY = screenH - boxH;
+        velY = -Math.abs(velY);
+        hitY = true;
+      }
+
+      // Any collision
+      if (hitX || hitY) {
+        bounceCount++;
+        nextColor();
+        hud.textContent = `DVD Video \u2022 4:3 Ratio Fixed \u2022 Bounces: ${bounceCount} | Corners: ${cornerHits}`;
+
+        // Corner Hit Detection!
+        if (hitX && hitY) {
+          const cx = velX > 0 ? 0 : screenW;
+          const cy = velY > 0 ? 0 : screenH;
+          triggerCornerHit(cx, cy);
+        }
+      }
+
+      // Apply transform via hardware acceleration
+      dvdBox.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
+
+      // Render FX Particles
+      if (particles.length > 0) {
+        fxCtx.clearRect(0, 0, screenW, screenH);
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.08; // gravity
+          p.alpha -= p.decay;
+
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          fxCtx.beginPath();
+          fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          fxCtx.fillStyle = p.color;
+          fxCtx.globalAlpha = p.alpha;
+          fxCtx.fill();
+        }
+        fxCtx.globalAlpha = 1.0;
+      }
+    }
+
+    requestAnimationFrame(update);
+
+    // Interactive controls
+    dvdBox.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nextColor();
+      // Add slight impulse kick
+      velX = -velX + (Math.random() - 0.5) * 0.4;
+      velY = -velY + (Math.random() - 0.5) * 0.4;
+    });
+
+    container.addEventListener('click', () => {
+      isPaused = !isPaused;
+    });
+  </script>
+</body>
+</html>
